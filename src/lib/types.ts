@@ -1,0 +1,72 @@
+export type GamePhase =
+	| 'error'
+	| 'lobby'
+	| 'loading-question'
+	| 'writing'
+	| 'reading'
+	| 'voting'
+	| 'scoring'
+	| 'winner'
+	| 'ended';
+
+export interface Player {
+	id: string;
+	name: string;
+	score: number;
+	isHost: boolean;
+	hasSubmitted: boolean;
+	hasVoted: boolean;
+}
+
+export interface GameState {
+	code: string;
+	players: Player[];
+	phase: GamePhase;
+	currentRound: number;
+	currentWord?: string;
+	possibleAnswers?: Array<{
+		id: string;
+		text: string;
+	}>;
+	roundResults?: {
+		correctAnswerId: string;
+		playerGuesses: Record<string, string>;
+		pointsChanges: Record<string, number>;
+		answers: Array<{
+			id: string;
+			text: string;
+			owner:
+				| {
+						type: 'system';
+				  }
+				| {
+						type: 'player';
+						playerId: string;
+				  };
+		}>;
+	};
+}
+
+export interface Question {
+	word: string;
+	definition: string;
+}
+
+export interface Round {
+	word: string;
+	correctAnswerId: string;
+	answers: Array<{
+		id: string;
+		owner:
+			| {
+					type: 'system';
+			  }
+			| {
+					type: 'player';
+					playerId: string;
+			  };
+		text: string;
+	}>;
+	playerVotes: Record<string, string>;
+	rewardedPoints: Record<string, number>;
+}
