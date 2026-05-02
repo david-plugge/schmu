@@ -1,17 +1,41 @@
 import { db } from '$lib/server/db';
 import { questions } from '$lib/server/db/schema';
 import { generateDefinitions } from './definitions';
+import { LLM_BATCH_SIZE, getExistingWords, insertResults } from './helpers';
 import { delay, fetchRandomGermanWords, RATE_LIMIT_BACKOFF } from './wiktionary';
 
 const WIKTIONARY_FETCH_SIZE = 50;
 const TARGET_COUNT = parseInt(process.argv[2] || '100', 10);
 
-function getExistingWords(): string[] {
-	return db
-		.select({ word: questions.word })
-		.from(questions)
-		.all()
-		.map((q) => q.word);
+async function* wordSource(seedSeen: Iterable<string>): AsyncGenerator<string> {
+	const seen = new Set(seedSeen);
+	while (true) {
+		try {
+			const words = await fetchRandomGermanWords(WIKTIONARY_FETCH_SIZE);
+			const fresh = words.filter((w) => !seen.has(w));
+			if (fresh.length === 0) {
+				console.log('  No new words from Wiktionary, backing off...');
+				await delay(RATE_LIMIT_BACKOFF);
+				continue;
+			}
+			for (const w of fresh) {
+				seen.add(w);
+				yield w;
+			}
+		} catch (err) {
+			console.error('  Wiktionary fetch failed, retrying...', err);
+			await delay(RATE_LIMIT_BACKOFF);
+		}
+	}
+}
+
+async function take<T>(n: number, source: AsyncGenerator<T>): Promise<T[]> {
+	const out: T[] = [];
+	for await (const item of source) {
+		out.push(item);
+		if (out.length === n) break;
+	}
+	return out;
 }
 
 async function seed() {
@@ -24,46 +48,21 @@ async function seed() {
 		return;
 	}
 
-	const existingWords = getExistingWords();
+	const source = wordSource(getExistingWords());
 
 	while (toGenerate > 0) {
-		console.log(`\nFetching words from Wiktionary... (${toGenerate} remaining)`);
+		const batch = await take(LLM_BATCH_SIZE, source);
+		if (batch.length === 0) break;
 
+		console.log(`\nGenerating definitions for ${batch.length} words... (${toGenerate} remaining)`);
 		try {
-			const words = await fetchRandomGermanWords(WIKTIONARY_FETCH_SIZE);
-			const newWords = words.filter((w) => !existingWords.includes(w));
-
-			if (newWords.length === 0) {
-				console.log('  No new words found, waiting before retry...');
-				await delay(RATE_LIMIT_BACKOFF);
-				continue;
-			}
-
-			console.log(`  Got ${newWords.length} new words, generating definitions...`);
-			const batch = await generateDefinitions(newWords);
-			let inserted = 0;
-
-			for (const q of batch) {
-				try {
-					db.insert(questions)
-						.values({
-							word: q.word,
-							definition: q.definition,
-							category: q.category,
-							difficulty: q.difficulty
-						})
-						.run();
-					existingWords.push(q.word);
-					inserted++;
-				} catch {
-					// duplicate word (UNIQUE constraint), skip
-				}
-			}
-
+			const results = await generateDefinitions(batch);
+			console.log(`  LLM accepted ${results.length}/${batch.length}`);
+			const inserted = insertResults(results);
 			toGenerate -= inserted;
-			console.log(`  Inserted ${inserted} questions`);
+			console.log(`  Inserted ${inserted}`);
 		} catch (err) {
-			console.error('Batch failed, retrying...', err);
+			console.error('  LLM batch failed, retrying...', err);
 		}
 	}
 

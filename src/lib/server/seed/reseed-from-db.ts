@@ -1,12 +1,10 @@
 import { db } from '$lib/server/db';
 import { questions } from '$lib/server/db/schema';
 import { generateDefinitions } from './definitions';
-
-const BATCH_SIZE = 20;
+import { LLM_BATCH_SIZE, getExistingWords, insertResults } from './helpers';
 
 async function reseed() {
-	const existing = db.select({ word: questions.word }).from(questions).all();
-	const words = existing.map((r) => r.word);
+	const words = getExistingWords();
 	console.log(`Loaded ${words.length} words from DB`);
 	if (words.length === 0) {
 		console.log('Nothing to do.');
@@ -17,31 +15,16 @@ async function reseed() {
 	db.delete(questions).run();
 
 	let kept = 0;
-	for (let i = 0; i < words.length; i += BATCH_SIZE) {
-		const batch = words.slice(i, i + BATCH_SIZE);
+	for (let i = 0; i < words.length; i += LLM_BATCH_SIZE) {
+		const batch = words.slice(i, i + LLM_BATCH_SIZE);
 		console.log(
-			`\nBatch ${i / BATCH_SIZE + 1} (${batch.length} words, ${i + batch.length}/${words.length})...`
+			`\nBatch ${i / LLM_BATCH_SIZE + 1} (${batch.length} words, ${i + batch.length}/${words.length})...`
 		);
 
 		try {
 			const results = await generateDefinitions(batch);
 			console.log(`  LLM accepted ${results.length}/${batch.length}`);
-
-			for (const q of results) {
-				try {
-					db.insert(questions)
-						.values({
-							word: q.word,
-							definition: q.definition,
-							category: q.category,
-							difficulty: q.difficulty
-						})
-						.run();
-					kept++;
-				} catch {
-					// duplicate, skip
-				}
-			}
+			kept += insertResults(results);
 		} catch (err) {
 			console.error('  Batch failed:', err);
 		}
