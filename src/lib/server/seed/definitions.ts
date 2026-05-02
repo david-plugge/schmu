@@ -37,10 +37,11 @@ export async function generateDefinitions(words: string[]) {
 
 			DEFINITIONS-FORMAT:
 			Definitionen müssen kurz, trocken, ohne Fachbegriffe und für jeden verständlich sein.
+			KEIN Punkt am Ende der Definition.
 			Beispiele für den Stil:
-			- "Ein veraltetes medizinisches Instrument zur Aderlassung."
-			- "Der Fachbegriff für die Angst vor der Zahl 13."
-			- "Ein Zierrat an mittelalterlichen Helmen."
+			- "Ein veraltetes medizinisches Instrument zur Aderlassung"
+			- "Der Fachbegriff für die Angst vor der Zahl 13"
+			- "Ein Zierrat an mittelalterlichen Helmen"
 			WICHTIG: Das Wort selbst darf in der Definition NICHT vorkommen!
 
 			KATEGORIEN:
@@ -66,5 +67,8 @@ export async function generateDefinitions(words: string[]) {
 		})
 	});
 
-	return output.rounds;
+	return output.rounds.map((r) => ({
+		...r,
+		definition: r.definition.trim().replace(/\.+$/, '')
+	}));
 }
