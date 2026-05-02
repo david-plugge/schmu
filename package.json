@@ -14,7 +14,10 @@
 		"lint": "prettier --check . && eslint .",
 		"db:push": "drizzle-kit push",
 		"db:seed": "vite-node --options.transformMode.ssr='/.*/' src/lib/server/seed/index.ts",
-		"db:reseed": "vite-node --options.transformMode.ssr='/.*/' src/lib/server/seed/reseed-from-db.ts"
+		"db:reseed": "vite-node --options.transformMode.ssr='/.*/' src/lib/server/seed/reseed-from-db.ts",
+		"test": "pnpm run '/^test:/'",
+		"test:unit": "vitest",
+		"test:e2e": "playwright install && playwright test"
 	},
 	"devDependencies": {
 		"@ai-sdk/deepseek": "^2.0.32",
@@ -22,12 +25,14 @@
 		"@eslint/js": "^10.0.1",
 		"@internationalized/date": "^3.12.1",
 		"@lucide/svelte": "^1.14.0",
+		"@playwright/test": "^1.59.1",
 		"@sveltejs/adapter-node": "^5.5.4",
 		"@sveltejs/kit": "^2.59.0",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@tailwindcss/vite": "^4.2.4",
 		"@types/better-sqlite3": "^7.6.13",
 		"@types/node": "^24.0.0",
+		"@vitest/browser-playwright": "^4.1.3",
 		"ai": "^6.0.174",
 		"bits-ui": "^2.18.0",
 		"clsx": "^2.1.1",
@@ -36,6 +41,7 @@
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.17.1",
 		"globals": "^17.6.0",
+		"playwright": "^1.59.1",
 		"prettier": "^3.8.3",
 		"prettier-plugin-svelte": "^3.5.1",
 		"prettier-plugin-tailwindcss": "^0.8.0",
@@ -50,6 +56,8 @@
 		"vite": "^8.0.10",
 		"vite-node": "^6.0.0",
 		"vite-plugin-devtools-json": "^1.0.0",
+		"vitest": "^4.1.3",
+		"vitest-browser-svelte": "^2.1.0",
 		"zod": "^4.4.2"
 	},
 	"packageManager": "pnpm@11.0.3+sha512.10448f2988933787c6699aef683174c741f6472ad91b7e3c8fe3e2bda57be8a0f7caf58949b8bc22e624578b3dc6e57876ba4c631928a1b84cc141e12c79bccd",
