@@ -1,18 +1,26 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import { cn } from '$lib/utils';
-	import type { GameState, Player } from '$lib/types';
-	import { startNextRound, voteOnQuestion } from './game.remote';
+	import type { ViewerPlayer, ViewerRoundResults, Vote } from '$lib/phase-machine';
+	import { startNextRound, toggleQuestionVote } from './game.remote';
 	import { ThumbsUp, ThumbsDown } from '@lucide/svelte';
 
 	type Props = {
 		code: string;
 		currentWord: string;
-		players: Player[];
+		players: ViewerPlayer[];
 		isHost: boolean;
-		roundResults: NonNullable<GameState['roundResults']>;
+		roundResults: ViewerRoundResults;
+		myQuestionVote: Vote | undefined;
 	};
-	let { code, currentWord, players, isHost, roundResults: results }: Props = $props();
+	let {
+		code,
+		currentWord,
+		players,
+		isHost,
+		roundResults: results,
+		myQuestionVote
+	}: Props = $props();
 </script>
 
 <div class="flex flex-col gap-6">
@@ -84,10 +92,10 @@
 	<div class="flex items-center justify-center gap-4">
 		<span class="text-sm text-muted-foreground">Frage bewerten:</span>
 		<button
-			onclick={() => voteOnQuestion({ code, vote: 'up' })}
+			onclick={() => toggleQuestionVote({ code, vote: 'up' })}
 			class={cn(
 				'rounded-lg p-2 transition-colors',
-				results.myQuestionVote === 'up'
+				myQuestionVote === 'up'
 					? 'bg-neon-green/20 text-neon-green'
 					: 'text-muted-foreground hover:bg-neon-green/10 hover:text-neon-green'
 			)}
@@ -95,10 +103,10 @@
 			<ThumbsUp size={20} />
 		</button>
 		<button
-			onclick={() => voteOnQuestion({ code, vote: 'down' })}
+			onclick={() => toggleQuestionVote({ code, vote: 'down' })}
 			class={cn(
 				'rounded-lg p-2 transition-colors',
-				results.myQuestionVote === 'down'
+				myQuestionVote === 'down'
 					? 'bg-neon-pink/20 text-neon-pink'
 					: 'text-muted-foreground hover:bg-neon-pink/10 hover:text-neon-pink'
 			)}
@@ -111,7 +119,7 @@
 	<div class="rounded-xl border border-neon-purple/30 bg-card/80 p-4">
 		<h3 class="mb-3 text-center text-sm font-bold text-neon-purple">Punkte</h3>
 		<div class="flex flex-col gap-1">
-			{#each players.sort((a, b) => b.score - a.score) as player (player.id)}
+			{#each players.toSorted((a, b) => b.score - a.score) as player (player.id)}
 				{@const pointsChange = results.pointsChanges[player.id] ?? 0}
 				<div class="flex items-center justify-between rounded-lg px-3 py-2">
 					<span class="font-medium">{player.name}</span>

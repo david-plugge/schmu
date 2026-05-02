@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import type { Player } from '$lib/types';
+	import type { ViewerPlayer } from '$lib/phase-machine';
 	import type { CategorySlug } from '$lib/categories';
 	import PlayerList from './PlayerList.svelte';
 	import CategoryPicker from './CategoryPicker.svelte';
@@ -9,7 +9,7 @@
 
 	type Props = {
 		code: string;
-		players: Player[];
+		players: ViewerPlayer[];
 		isHost: boolean;
 		enabledCategories: CategorySlug[];
 	};

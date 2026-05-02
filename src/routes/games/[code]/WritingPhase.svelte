@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
-	import type { Player } from '$lib/types';
-	import { ThumbsDown, SkipForward } from '@lucide/svelte';
+	import type { ViewerPlayer, Vote } from '$lib/phase-machine';
+	import { ThumbsDown, ThumbsUp, SkipForward } from '@lucide/svelte';
 	import { cn } from '$lib/utils';
-	import { submitAnswer, downvoteQuestion, skipWord } from './game.remote';
+	import { submitAnswer, toggleQuestionVote, skipWord } from './game.remote';
 
 	type Props = {
 		code: string;
 		currentWord: string;
-		currentPlayer: Player;
-		players: Player[];
-		hasDownvotedQuestion: boolean;
+		currentPlayer: ViewerPlayer;
+		players: ViewerPlayer[];
+		myQuestionVote: Vote | undefined;
 	};
-	let { code, currentWord, currentPlayer, players, hasDownvotedQuestion }: Props = $props();
+	let { code, currentWord, currentPlayer, players, myQuestionVote }: Props = $props();
 
 	let skipCount = $derived(players.filter((p) => p.hasSkipped).length);
 
@@ -55,10 +55,22 @@
 
 		<div class="flex items-center justify-center gap-3">
 			<button
-				onclick={() => downvoteQuestion(code)}
+				onclick={() => toggleQuestionVote({ code, vote: 'up' })}
 				class={cn(
 					'flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm transition-colors',
-					hasDownvotedQuestion
+					myQuestionVote === 'up'
+						? 'bg-neon-green/20 text-neon-green'
+						: 'text-muted-foreground hover:bg-neon-green/10 hover:text-neon-green'
+				)}
+			>
+				<ThumbsUp size={16} />
+				Gutes Wort
+			</button>
+			<button
+				onclick={() => toggleQuestionVote({ code, vote: 'down' })}
+				class={cn(
+					'flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm transition-colors',
+					myQuestionVote === 'down'
 						? 'bg-neon-pink/20 text-neon-pink'
 						: 'text-muted-foreground hover:bg-neon-pink/10 hover:text-neon-pink'
 				)}

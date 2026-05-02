@@ -1,7 +1,7 @@
 import { command, form, query } from '$app/server';
 import { gameManager } from '$lib/server/game-manager';
 import { assertSession } from '$lib/server/session';
-import type { GameState } from '$lib/types';
+import type { ViewerGameState } from '$lib/phase-machine';
 import { CATEGORY_SLUGS } from '$lib/categories';
 import { error } from '@sveltejs/kit';
 import z from 'zod';
@@ -17,17 +17,23 @@ const assertGame = (code: string) => {
 export const getGame = query.live(z.string(), async function* (code) {
 	const session = assertSession();
 	const game = assertGame(code);
-	let state!: GameState;
-	let resolve: (() => void) | undefined;
-	const unsub = game.subscribe(session.id, (_state) => {
-		state = _state;
-		resolve?.();
+	let latest!: ViewerGameState;
+	let dirty = false;
+	let waiter: (() => void) | undefined;
+	const unsub = game.subscribe(session.id, (state) => {
+		latest = state;
+		dirty = true;
+		waiter?.();
+		waiter = undefined;
 	});
 
 	try {
 		while (true) {
-			yield state;
-			await new Promise<void>((r) => (resolve = r));
+			if (!dirty) {
+				await new Promise<void>((r) => (waiter = r));
+			}
+			dirty = false;
+			yield latest;
 		}
 	} finally {
 		unsub();
@@ -37,7 +43,11 @@ export const getGame = query.live(z.string(), async function* (code) {
 export const startGame = command(z.string(), (code) => {
 	const session = assertSession();
 	const game = assertGame(code);
-	game.startGame(session.id);
+	game.dispatch({
+		type: 'start-game',
+		playerId: session.id,
+		loadId: crypto.randomUUID()
+	});
 });
 
 export const setCategories = command(
@@ -48,7 +58,7 @@ export const setCategories = command(
 	({ code, categories }) => {
 		const session = assertSession();
 		const game = assertGame(code);
-		game.setEnabledCategories(session.id, categories);
+		game.dispatch({ type: 'set-categories', playerId: session.id, categories });
 	}
 );
 
@@ -60,20 +70,31 @@ export const submitAnswer = form(
 	({ answer, code }) => {
 		const session = assertSession();
 		const game = assertGame(code);
-		game.submitAnswer(session.id, answer);
+		game.dispatch({
+			type: 'submit-answer',
+			playerId: session.id,
+			answerId: crypto.randomUUID(),
+			text: answer
+		});
 	}
 );
 
-export const downvoteQuestion = command(z.string(), (code) => {
-	const session = assertSession();
-	const game = assertGame(code);
-	game.downvoteQuestion(session.id);
-});
+export const toggleQuestionVote = command(
+	z.object({
+		code: z.string(),
+		vote: z.enum(['up', 'down'])
+	}),
+	({ code, vote }) => {
+		const session = assertSession();
+		const game = assertGame(code);
+		game.dispatch({ type: 'toggle-question-vote', playerId: session.id, vote });
+	}
+);
 
 export const skipWord = command(z.string(), (code) => {
 	const session = assertSession();
 	const game = assertGame(code);
-	game.skipWord(session.id);
+	game.dispatch({ type: 'toggle-skip', playerId: session.id });
 });
 
 export const submitVote = command(
@@ -84,25 +105,28 @@ export const submitVote = command(
 	({ answerId, code }) => {
 		const session = assertSession();
 		const game = assertGame(code);
-		game.submitVote(session.id, answerId);
-	}
-);
-
-export const voteOnQuestion = command(
-	z.object({
-		code: z.string(),
-		vote: z.enum(['up', 'down'])
-	}),
-	({ code, vote }) => {
-		const session = assertSession();
-		const game = assertGame(code);
-		game.voteOnQuestion(session.id, vote);
+		game.dispatch({ type: 'submit-vote', playerId: session.id, answerId });
 	}
 );
 
 export const startNextRound = command(z.object({ code: z.string() }), ({ code }) => {
-	assertSession();
+	const session = assertSession();
 	const game = assertGame(code);
+	game.dispatch({
+		type: 'next-round',
+		playerId: session.id,
+		loadId: crypto.randomUUID()
+	});
+});
 
-	game.nextRound();
+export const endGame = command(z.string(), (code) => {
+	const session = assertSession();
+	const game = assertGame(code);
+	game.dispatch({ type: 'end-game', playerId: session.id });
+});
+
+export const backToLobby = command(z.string(), (code) => {
+	const session = assertSession();
+	const game = assertGame(code);
+	game.dispatch({ type: 'back-to-lobby', playerId: session.id });
 });

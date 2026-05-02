@@ -1,35 +1,39 @@
-import { GameInstance } from './game';
+import { GameDispatcher, type DispatcherDeps } from './game-dispatcher';
+import { getRandomQuestions, incrementTimesPlayed, voteQuestion } from './db/questions';
+
+const realDeps: DispatcherDeps = {
+	loadQuestion(usedWords, categories) {
+		const [q] = getRandomQuestions(1, usedWords, categories);
+		return Promise.resolve(q ?? null);
+	},
+	voteQuestion,
+	incrementTimesPlayed,
+	mintId: () => crypto.randomUUID()
+};
 
 class GameManager {
-	private readonly games = new Map<string, GameInstance>();
+	private readonly games = new Map<string, GameDispatcher>();
 
-	createGame(playerId: string, playerName: string) {
+	createGame(playerId: string, playerName: string): string {
 		const code = createRandomCode();
-		const game = new GameInstance(code);
-		game.addPlayer(playerId, playerName, true);
+		const game = new GameDispatcher(code, realDeps);
+		game.dispatch({ type: 'add-player', playerId, name: playerName, isHost: true });
 		this.games.set(code, game);
 		return code;
 	}
 
-	joinGame(code: string, playerId: string, playerName: string) {
+	joinGame(code: string, playerId: string, playerName: string): void {
 		const game = this.games.get(code);
 		if (!game) throw new Error('Game not found');
-		game.addPlayer(playerId, playerName, false);
+		game.dispatch({ type: 'add-player', playerId, name: playerName, isHost: false });
 	}
 
-	endGame(code: string) {
-		const game = this.games.get(code);
-		if (!game) throw new Error('Game not found');
-		game.endGame();
-		this.games.delete(code);
-	}
-
-	getGame(code: string) {
+	getGame(code: string): GameDispatcher | undefined {
 		return this.games.get(code);
 	}
 }
 
-function createRandomCode() {
+function createRandomCode(): string {
 	return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
 

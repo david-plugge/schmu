@@ -1,16 +1,9 @@
 <script lang="ts">
 	import { getLoggedInUser } from '../../setup.remote';
-
-	type Player = {
-		id: string;
-		name: string;
-		score: number;
-		isHost: boolean;
-		hasSubmitted: boolean;
-	};
+	import type { ViewerPlayer } from '$lib/phase-machine';
 
 	type Props = {
-		players: Player[];
+		players: ViewerPlayer[];
 	};
 	let { players }: Props = $props();
 

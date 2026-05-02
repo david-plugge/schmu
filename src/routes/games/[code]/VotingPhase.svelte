@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
-	import type { Player } from '$lib/types';
+	import type { ViewerAnswer, ViewerPlayer } from '$lib/phase-machine';
 	import { submitVote } from './game.remote';
 
 	type Props = {
 		code: string;
 		currentWord: string;
-		currentPlayer: Player;
-		possibleAnswers: Array<{ id: string; text: string; isOwn: boolean }>;
+		currentPlayer: ViewerPlayer;
+		possibleAnswers: ViewerAnswer[];
 	};
 	let { code, currentWord, currentPlayer, possibleAnswers }: Props = $props();
 

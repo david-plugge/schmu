@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { Button } from '$lib/components/ui/button';
 	import { getLoggedInUser } from '../../setup.remote';
-	import { getGame } from './game.remote';
+	import { backToLobby, getGame } from './game.remote';
 	import LobbyPhase from './LobbyPhase.svelte';
 	import ScoringPhase from './ScoringPhase.svelte';
 	import VotingPhase from './VotingPhase.svelte';
@@ -23,10 +24,10 @@
 			<p class="animate-pulse text-lg text-neon-cyan">Beitritt läuft...</p>
 		</div>
 	{:else}
-		{#if gameState.phase !== 'lobby'}
+		{#if gameState.phase !== 'lobby' && gameState.phase !== 'ended' && gameState.phase !== 'error'}
 			<div class="mb-6 text-center">
 				<span class="rounded-full bg-neon-purple/20 px-4 py-1 text-sm font-bold text-neon-purple">
-					Runde {gameState.currentRound}
+					Runde {gameState.currentRoundNumber}
 				</span>
 			</div>
 		{/if}
@@ -45,26 +46,38 @@
 		{:else if gameState.phase === 'writing' && currentPlayer}
 			<WritingPhase
 				code={params.code}
-				currentWord={gameState.currentWord!}
+				currentWord={gameState.currentWord}
 				{currentPlayer}
 				players={gameState.players}
-				hasDownvotedQuestion={gameState.hasDownvotedQuestion ?? false}
+				myQuestionVote={gameState.myQuestionVote}
 			/>
-		{:else if gameState.phase === 'voting' && currentPlayer && gameState.possibleAnswers}
+		{:else if gameState.phase === 'voting' && currentPlayer}
 			<VotingPhase
 				code={params.code}
-				currentWord={gameState.currentWord!}
+				currentWord={gameState.currentWord}
 				{currentPlayer}
 				possibleAnswers={gameState.possibleAnswers}
 			/>
-		{:else if gameState.phase === 'scoring' && gameState.roundResults}
+		{:else if gameState.phase === 'scoring'}
 			<ScoringPhase
 				code={params.code}
-				currentWord={gameState.currentWord!}
+				currentWord={gameState.currentWord}
 				players={gameState.players}
 				isHost={currentPlayer?.isHost ?? false}
 				roundResults={gameState.roundResults}
+				myQuestionVote={gameState.myQuestionVote}
 			/>
+		{:else if gameState.phase === 'error'}
+			<div class="flex min-h-[50vh] flex-col items-center justify-center gap-4">
+				<p class="text-lg text-neon-pink">Fehler: {gameState.reason}</p>
+				{#if currentPlayer?.isHost}
+					<Button onclick={() => backToLobby(params.code)}>Zurück zur Lobby</Button>
+				{/if}
+			</div>
+		{:else if gameState.phase === 'ended'}
+			<div class="flex min-h-[50vh] items-center justify-center">
+				<p class="text-lg text-neon-purple">Spiel beendet</p>
+			</div>
 		{/if}
 	{/if}
 </div>
