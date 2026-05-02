@@ -3,26 +3,6 @@ import { generateQuestionBatch } from './ai';
 
 type GameStateListener = (state: GameState) => void;
 
-const initialQueue = [
-	{ word: 'Triskaldekaphobie', definition: 'Angst vor der Zahl 13.' },
-	{
-		word: 'Kakistokratie',
-		definition: 'Herrschaft der Schlechtesten.'
-	},
-	{
-		word: 'Gargoyle',
-		definition: 'Wasserspeier in Form einer grotesken Figur.'
-	},
-	{
-		word: 'Sesquipedalophobie',
-		definition: 'Angst vor langen Wörtern.'
-	},
-	{
-		word: 'Zugzwang',
-		definition: 'Situation, in der man handeln muss.'
-	}
-];
-
 const CORRECT_ANSWER_REDARD = 2;
 const FOOLED_ANSWER_REDARD = 3;
 

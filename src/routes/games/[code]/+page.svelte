@@ -1,46 +1,21 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
-	import { onMount } from 'svelte';
-	import { getLoggedInUser } from '../../setup.remote.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { startGame, startNextRound, submitAnswer, submitVote } from './game.remote.js';
+	import { getLoggedInUser } from '../../setup.remote';
+	import { Button } from '$lib/components/ui/button';
+	import { getGame, startGame, startNextRound, submitAnswer, submitVote } from './game.remote';
 	import PlayerList from './PlayerList.svelte';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import type { GameState } from '$lib/types.js';
-	import { cn } from '$lib/utils.js';
+	import { Input } from '$lib/components/ui/input';
+	import { cn } from '$lib/utils';
 	import { page } from '$app/state';
 
 	let { params } = $props();
 
 	const user = $derived(await getLoggedInUser());
 
-	let gameState: GameState | null = $state(null);
+	const gameStateLive = $derived(getGame(params.code));
+	const gameState = $derived(await gameStateLive);
 	const currentPlayer = $derived.by(() =>
 		gameState?.players.find((player) => player.id === user.id)
 	);
-
-	onMount(connect);
-
-	function connect() {
-		const sse = new EventSource(resolve('/api/events/[code]', { code: params.code }), {
-			withCredentials: true
-		});
-
-		sse.addEventListener('message', (e) => {
-			console.log('message', e.data);
-			const data = JSON.parse(e.data);
-
-			gameState = data;
-		});
-		sse.addEventListener('error', () => {
-			console.log('error');
-
-			setTimeout(connect, 1000);
-		});
-		sse.addEventListener('open', () => {
-			console.log('open');
-		});
-	}
 
 	let myVoteId = $state<string>();
 	function vote(answerId: string) {
