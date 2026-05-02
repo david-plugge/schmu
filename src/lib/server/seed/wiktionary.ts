@@ -8,6 +8,13 @@ const WORD_RE = /^[A-ZÄÖÜ][a-zäöüß]+$/;
 const MIN_LENGTH = 4;
 const OBSCURE_CATEGORIES = ['Kategorie:Fremdwort', 'Kategorie:veralteter Wortschatz (Deutsch)'];
 const INFLECTED_CATEGORIES = ['Deklinierte Form (Deutsch)', 'Konjugierte Form (Deutsch)'];
+const PROPER_NOUN_CATEGORIES = [
+	'Toponym (Deutsch)',
+	'Vorname (Deutsch)',
+	'Nachname (Deutsch)',
+	'Familienname (Deutsch)',
+	'Eigenname (Deutsch)'
+];
 
 export const RATE_LIMIT_BACKOFF = 5000;
 
@@ -102,8 +109,8 @@ async function fetchRandomBaseWords(count: number): Promise<string[]> {
 			.filter((t) => WORD_RE.test(t) && t.length >= MIN_LENGTH);
 
 		await delay(1000);
-		const baseWords = await filterBaseFormWords(candidates);
-		words.push(...baseWords);
+		const acceptable = await filterAcceptableWords(candidates);
+		words.push(...acceptable);
 	}
 
 	return [...new Set(words)].slice(0, count);
@@ -139,7 +146,9 @@ async function fetchFromObscureCategories(count: number): Promise<string[]> {
 				.filter((t) => WORD_RE.test(t) && t.length >= MIN_LENGTH);
 
 			shuffle(members);
-			words.push(...members.slice(0, perCategory));
+			await delay(1000);
+			const acceptable = await filterAcceptableWords(members.slice(0, perCategory));
+			words.push(...acceptable);
 		} catch {
 			// skip failed category
 		}
@@ -148,7 +157,7 @@ async function fetchFromObscureCategories(count: number): Promise<string[]> {
 	return words;
 }
 
-async function filterBaseFormWords(titles: string[]): Promise<string[]> {
+async function filterAcceptableWords(titles: string[]): Promise<string[]> {
 	if (titles.length === 0) return [];
 
 	const data = await wiktionaryFetch<PagesResponse>(
@@ -167,7 +176,8 @@ async function filterBaseFormWords(titles: string[]): Promise<string[]> {
 		const cats = (page.categories ?? []).map((c) => c.title);
 		const isGerman = cats.some((c) => c.includes('(Deutsch)'));
 		const isInflected = cats.some((c) => INFLECTED_CATEGORIES.some((inf) => c.includes(inf)));
-		if (isGerman && !isInflected) result.push(page.title);
+		const isProperNoun = cats.some((c) => PROPER_NOUN_CATEGORIES.some((pn) => c.includes(pn)));
+		if (isGerman && !isInflected && !isProperNoun) result.push(page.title);
 	}
 
 	return result;
