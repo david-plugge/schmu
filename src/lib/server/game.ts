@@ -1,5 +1,5 @@
 import type { GamePhase, GameState, Player, Question, Round } from '$lib/types';
-import { getRandomQuestions } from './db/questions';
+import { getRandomQuestions, voteQuestion } from './db/questions';
 
 type GameStateListener = (state: GameState) => void;
 
@@ -109,11 +109,32 @@ export class GameInstance {
 		}
 	}
 
+	public voteOnQuestion(playerId: string, vote: 'up' | 'down') {
+		if (this.phase !== 'scoring' || !this.currentRound) return;
+		const player = this.players.get(playerId);
+		if (!player) return;
+
+		const previousVote = this.currentRound.questionVotes[playerId];
+		if (previousVote === vote) return;
+
+		// Calculate delta for DB update
+		let delta = vote === 'up' ? 1 : -1;
+		if (previousVote) {
+			// Undo previous vote: if was 'up' subtract 1, if was 'down' add 1
+			delta += previousVote === 'up' ? -1 : 1;
+		}
+
+		this.currentRound.questionVotes[playerId] = vote;
+		voteQuestion(this.currentRound.questionId, delta);
+		this.notify();
+	}
+
 	public nextRound() {
 		try {
 			this.setupNewRound();
 			this.transitionTo('writing');
-		} catch {
+		} catch (err) {
+			console.error(`[${this.code}] nextRound failed:`, err);
 			this.transitionTo('error');
 		}
 	}
@@ -145,9 +166,7 @@ export class GameInstance {
 					? this.currentRound.answers.map((a) => ({
 							id: a.id,
 							text: a.text,
-							isOwn:
-								a.owner.type === 'player' &&
-								a.owner.playerId === viewerPlayerId
+							isOwn: a.owner.type === 'player' && a.owner.playerId === viewerPlayerId
 						}))
 					: undefined,
 			currentWord: this.currentRound?.word,
@@ -165,12 +184,11 @@ export class GameInstance {
 										? { type: 'system' as const }
 										: {
 												type: 'player' as const,
-												name:
-													this.players.get(a.owner.playerId)?.name ??
-													'Unbekannt',
+												name: this.players.get(a.owner.playerId)?.name ?? 'Unbekannt',
 												isOwn: a.owner.playerId === viewerPlayerId
 											}
-							}))
+							})),
+							myQuestionVote: this.currentRound.questionVotes[viewerPlayerId]
 						}
 					: undefined
 		};
@@ -223,8 +241,10 @@ export class GameInstance {
 				}
 			],
 			word: question.word,
+			questionId: question.id,
 			rewardedPoints: {},
-			playerVotes: {}
+			playerVotes: {},
+			questionVotes: {}
 		};
 		this.players.forEach((player) => {
 			player.hasSubmitted = false;

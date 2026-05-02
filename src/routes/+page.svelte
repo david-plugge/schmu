@@ -23,7 +23,9 @@
 		</div>
 
 		{#if !user}
-			<Card.Root class="w-full border-neon-purple/30 bg-card/80 shadow-lg shadow-neon-purple/10 backdrop-blur-sm">
+			<Card.Root
+				class="w-full border-neon-purple/30 bg-card/80 shadow-lg shadow-neon-purple/10 backdrop-blur-sm"
+			>
 				<Card.Header>
 					<Card.Title class="text-center text-neon-cyan">Willkommen!</Card.Title>
 				</Card.Header>
@@ -51,7 +53,9 @@
 				</Card.Content>
 			</Card.Root>
 		{:else}
-			<Card.Root class="w-full border-neon-purple/30 bg-card/80 shadow-lg shadow-neon-purple/10 backdrop-blur-sm">
+			<Card.Root
+				class="w-full border-neon-purple/30 bg-card/80 shadow-lg shadow-neon-purple/10 backdrop-blur-sm"
+			>
 				<Card.Header>
 					<Card.Title class="text-center">
 						<span class="text-neon-green">{user.username}</span>
@@ -81,7 +85,7 @@
 								<Input
 									autocomplete="off"
 									placeholder="CODE"
-									class="border-neon-purple/30 bg-background/50 text-center text-lg font-mono tracking-widest uppercase placeholder:text-muted-foreground/50 focus:border-neon-cyan"
+									class="border-neon-purple/30 bg-background/50 text-center font-mono text-lg tracking-widest uppercase placeholder:text-muted-foreground/50 focus:border-neon-cyan"
 									{...joinGame.fields.code.as('text')}
 								/>
 								<Field.Error errors={joinGame.fields.code.issues()} />

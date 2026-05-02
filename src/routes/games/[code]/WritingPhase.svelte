@@ -23,7 +23,9 @@
 	</div>
 {:else}
 	<div class="flex flex-col gap-6">
-		<div class="rounded-xl border border-neon-purple/30 bg-card/80 p-6 text-center backdrop-blur-sm">
+		<div
+			class="rounded-xl border border-neon-purple/30 bg-card/80 p-6 text-center backdrop-blur-sm"
+		>
 			<p class="mb-2 text-sm text-muted-foreground">Was ist eigentlich...</p>
 			<p class="text-3xl font-black text-neon-yellow">{currentWord}</p>
 		</div>

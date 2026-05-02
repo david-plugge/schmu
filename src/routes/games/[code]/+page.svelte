@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { getLoggedInUser } from '../../setup.remote';
-	import { getGame, submitAnswer } from './game.remote';
+	import { getGame } from './game.remote';
 	import LobbyPhase from './LobbyPhase.svelte';
-	import WritingPhase from './WritingPhase.svelte';
-	import VotingPhase from './VotingPhase.svelte';
 	import ScoringPhase from './ScoringPhase.svelte';
+	import VotingPhase from './VotingPhase.svelte';
+	import WritingPhase from './WritingPhase.svelte';
 
 	let { params } = $props();
 
@@ -15,12 +15,6 @@
 	const currentPlayer = $derived.by(() =>
 		gameState?.players.find((player) => player.id === user.id)
 	);
-
-	$effect(() => {
-		if (gameState?.currentRound) {
-			submitAnswer.fields.answer.set('');
-		}
-	});
 </script>
 
 <div class="mx-auto max-w-2xl p-4">

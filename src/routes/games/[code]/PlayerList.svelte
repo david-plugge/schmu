@@ -17,7 +17,9 @@
 	const user = $derived(await getLoggedInUser());
 </script>
 
-<div class="flex flex-col gap-2 rounded-xl border border-neon-purple/30 bg-card/80 p-3 backdrop-blur-sm">
+<div
+	class="flex flex-col gap-2 rounded-xl border border-neon-purple/30 bg-card/80 p-3 backdrop-blur-sm"
+>
 	{#each players as player, i (player.id)}
 		{@const colors = [
 			'bg-neon-pink/15 text-neon-pink border-neon-pink/30',

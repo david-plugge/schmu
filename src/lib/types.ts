@@ -46,16 +46,19 @@ export interface GameState {
 						isOwn: boolean;
 				  };
 		}>;
+		myQuestionVote?: 'up' | 'down';
 	};
 }
 
 export interface Question {
+	id: number;
 	word: string;
 	definition: string;
 }
 
 export interface Round {
 	word: string;
+	questionId: number;
 	correctAnswerId: string;
 	answers: Array<{
 		id: string;
@@ -71,4 +74,5 @@ export interface Round {
 	}>;
 	playerVotes: Record<string, string>;
 	rewardedPoints: Record<string, number>;
+	questionVotes: Record<string, 'up' | 'down'>;
 }

@@ -44,7 +44,9 @@
 				disabled={currentPlayer.hasVoted || answer.isOwn}
 				onclick={() => vote(answer.id)}
 			>
-				<span class="mr-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-{color}/20 text-sm font-bold text-{color}">
+				<span
+					class="mr-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-{color}/20 text-sm font-bold text-{color}"
+				>
 					{String.fromCharCode(65 + i)}
 				</span>
 				{answer.text}

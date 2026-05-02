@@ -51,8 +51,6 @@
 			Spiel starten!
 		</Button>
 	{:else}
-		<p class="animate-pulse text-center text-sm text-muted-foreground">
-			Warte auf den Host...
-		</p>
+		<p class="animate-pulse text-center text-sm text-muted-foreground">Warte auf den Host...</p>
 	{/if}
 </div>

@@ -63,6 +63,18 @@ export const submitVote = command(
 	}
 );
 
+export const voteOnQuestion = command(
+	z.object({
+		code: z.string(),
+		vote: z.enum(['up', 'down'])
+	}),
+	({ code, vote }) => {
+		const session = assertSession();
+		const game = assertGame(code);
+		game.voteOnQuestion(session.id, vote);
+	}
+);
+
 export const startNextRound = command(z.object({ code: z.string() }), ({ code }) => {
 	assertSession();
 	const game = assertGame(code);

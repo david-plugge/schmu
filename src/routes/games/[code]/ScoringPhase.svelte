@@ -2,7 +2,8 @@
 	import { Button } from '$lib/components/ui/button';
 	import { cn } from '$lib/utils';
 	import type { GameState, Player } from '$lib/types';
-	import { startNextRound } from './game.remote';
+	import { startNextRound, voteOnQuestion } from './game.remote';
+	import { ThumbsUp, ThumbsDown } from '@lucide/svelte';
 
 	type Props = {
 		code: string;
@@ -55,6 +56,33 @@
 				</p>
 			</div>
 		{/each}
+	</div>
+
+	<!-- Question vote -->
+	<div class="flex items-center justify-center gap-4">
+		<span class="text-sm text-muted-foreground">Frage bewerten:</span>
+		<button
+			onclick={() => voteOnQuestion({ code, vote: 'up' })}
+			class={cn(
+				'rounded-lg p-2 transition-colors',
+				results.myQuestionVote === 'up'
+					? 'bg-neon-green/20 text-neon-green'
+					: 'text-muted-foreground hover:bg-neon-green/10 hover:text-neon-green'
+			)}
+		>
+			<ThumbsUp size={20} />
+		</button>
+		<button
+			onclick={() => voteOnQuestion({ code, vote: 'down' })}
+			class={cn(
+				'rounded-lg p-2 transition-colors',
+				results.myQuestionVote === 'down'
+					? 'bg-neon-pink/20 text-neon-pink'
+					: 'text-muted-foreground hover:bg-neon-pink/10 hover:text-neon-pink'
+			)}
+		>
+			<ThumbsDown size={20} />
+		</button>
 	</div>
 
 	<!-- Points changes -->
