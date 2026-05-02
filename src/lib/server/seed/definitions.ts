@@ -3,11 +3,15 @@ import { generateText, Output } from 'ai';
 import * as z from 'zod';
 import { DEEPSEEK_API_KEY } from '$env/static/private';
 import { CATEGORIES, CATEGORY_SLUGS } from '$lib/categories';
+import { DIFFICULTIES, DIFFICULTY_SLUGS } from '$lib/difficulties';
 import dedent from 'dedent';
 
 const deepseek = createDeepSeek({ apiKey: DEEPSEEK_API_KEY });
 
 const categoryList = CATEGORY_SLUGS.map((slug) => `- ${slug}: ${CATEGORIES[slug]}`).join('\n');
+const difficultyList = DIFFICULTY_SLUGS.map((slug) => `- ${slug}: ${DIFFICULTIES[slug]}`).join(
+	'\n'
+);
 
 export async function generateDefinitions(words: string[]) {
 	const { output } = await generateText({
@@ -49,6 +53,17 @@ export async function generateDefinitions(words: string[]) {
 			${categoryList}
 			Wenn keine Kategorie wirklich passt, nutze "sonstiges". Bevorzuge eine spezifische
 			Kategorie, wenn sie eindeutig zutrifft (z.B. ein anatomischer Fachbegriff -> "medizin").
+
+			SCHWIERIGKEIT:
+			Schätze, wie schwer das Wort für Spieler zu erraten ist (nutze den Slug):
+			${difficultyList}
+			- leicht: Bedeutung lässt sich aus Wortbestandteilen oder Kontext halbwegs ableiten;
+			  jemand mit guter Allgemeinbildung könnte einen plausiblen Tipp abgeben.
+			- mittel: völlig unbekannt, aber die Definition fühlt sich nach dem Auflösen logisch
+			  oder nachvollziehbar an.
+			- schwer: hochgradig obskur, archaisch oder völlig willkürlich klingend; selbst nach
+			  der Auflösung überraschend.
+			Im Zweifel: "mittel".
 		`,
 		output: Output.object({
 			schema: z.object({
@@ -60,7 +75,8 @@ export async function generateDefinitions(words: string[]) {
 							.describe(
 								'Eine sehr kurze, simple Erklärung (max. 50 zeichen). Ohne das Wort zu wiederholen.'
 							),
-						category: z.enum(CATEGORY_SLUGS).describe('Slug der am besten passenden Kategorie')
+						category: z.enum(CATEGORY_SLUGS).describe('Slug der am besten passenden Kategorie'),
+						difficulty: z.enum(DIFFICULTY_SLUGS).describe('Slug der geschätzten Rate-Schwierigkeit')
 					})
 				)
 			})

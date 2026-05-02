@@ -42,7 +42,11 @@ export const getWords = query(
 				id: questions.id,
 				word: questions.word,
 				definition: questions.definition,
-				votes: questions.votes
+				category: questions.category,
+				difficulty: questions.difficulty,
+				votes: questions.votes,
+				timesPlayed: questions.timesPlayed,
+				createdAt: questions.createdAt
 			})
 			.from(questions)
 			.where(where)

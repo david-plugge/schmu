@@ -20,9 +20,16 @@ export function getRandomQuestions(
 		.select({ id: questions.id, word: questions.word, definition: questions.definition })
 		.from(questions)
 		.where(conditions.length > 0 ? and(...conditions) : undefined)
-		.orderBy(sql`RANDOM()`)
+		.orderBy(questions.timesPlayed, sql`RANDOM()`)
 		.limit(count)
 		.all();
+}
+
+export function incrementTimesPlayed(questionId: number) {
+	db.update(questions)
+		.set({ timesPlayed: sql`${questions.timesPlayed} + 1` })
+		.where(eq(questions.id, questionId))
+		.run();
 }
 
 export function voteQuestion(questionId: number, delta: number) {

@@ -1,6 +1,6 @@
 import type { GamePhase, GameState, Player, Question, Round } from '$lib/types';
 import { CATEGORY_SLUGS, type CategorySlug } from '$lib/categories';
-import { getRandomQuestions, voteQuestion } from './db/questions';
+import { getRandomQuestions, incrementTimesPlayed, voteQuestion } from './db/questions';
 
 type GameStateListener = (state: GameState) => void;
 
@@ -336,6 +336,7 @@ export class GameInstance {
 			playerVotes: {},
 			questionVotes: {}
 		};
+		incrementTimesPlayed(question.id);
 		this.players.forEach((player) => {
 			player.hasSubmitted = false;
 			player.hasVoted = false;

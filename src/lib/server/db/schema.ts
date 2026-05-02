@@ -1,10 +1,16 @@
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import type { CategorySlug } from '$lib/categories';
+import type { DifficultySlug } from '$lib/difficulties';
 
 export const questions = sqliteTable('questions', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
 	word: text('word').notNull().unique(),
 	definition: text('definition').notNull(),
 	category: text('category').$type<CategorySlug>().notNull().default('sonstiges'),
-	votes: integer('votes').notNull().default(0)
+	difficulty: text('difficulty').$type<DifficultySlug>().notNull().default('mittel'),
+	votes: integer('votes').notNull().default(0),
+	timesPlayed: integer('times_played').notNull().default(0),
+	createdAt: integer('created_at', { mode: 'timestamp' })
+		.notNull()
+		.$defaultFn(() => new Date())
 });
