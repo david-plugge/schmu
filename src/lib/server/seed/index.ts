@@ -31,9 +31,10 @@ async function* wordSource(seedSeen: Iterable<string>): AsyncGenerator<string> {
 
 async function take<T>(n: number, source: AsyncGenerator<T>): Promise<T[]> {
 	const out: T[] = [];
-	for await (const item of source) {
-		out.push(item);
-		if (out.length === n) break;
+	for (let i = 0; i < n; i++) {
+		const { value, done } = await source.next();
+		if (done) break;
+		out.push(value);
 	}
 	return out;
 }
