@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { questions } from '$lib/server/db/schema';
 import { generateDefinitions } from './definitions';
-import { LLM_BATCH_SIZE, getExistingWords, insertResults } from './helpers';
+import { LLM_BATCH_SIZE, getExistingWords, insertRejections, insertResults } from './helpers';
 
 async function reseed() {
 	const words = getExistingWords();
@@ -23,8 +23,11 @@ async function reseed() {
 
 		try {
 			const results = await generateDefinitions(batch);
+			const acceptedSet = new Set(results.map((r) => r.word));
+			const rejected = batch.filter((w) => !acceptedSet.has(w));
 			console.log(`  LLM accepted ${results.length}/${batch.length}`);
 			kept += insertResults(results);
+			insertRejections(rejected);
 		} catch (err) {
 			console.error('  Batch failed:', err);
 		}

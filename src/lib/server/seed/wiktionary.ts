@@ -6,6 +6,10 @@ const HEADERS = {
 
 const WORD_RE = /^[A-ZÄÖÜ][a-zäöüß]+$/;
 const MIN_LENGTH = 4;
+const RANDOM_API_LIMIT = 200;
+const CATEGORY_API_LIMIT = 200;
+const TITLES_CHUNK = 50;
+const FILTER_CHUNK_DELAY = 300;
 const OBSCURE_CATEGORIES = ['Kategorie:Fremdwort', 'Kategorie:veralteter Wortschatz (Deutsch)'];
 const INFLECTED_CATEGORIES = ['Deklinierte Form (Deutsch)', 'Konjugierte Form (Deutsch)'];
 const PROPER_NOUN_CATEGORIES = [
@@ -78,88 +82,87 @@ async function wiktionaryFetch<T>(params: URLSearchParams): Promise<T | null> {
 
 export async function fetchRandomGermanWords(count: number): Promise<string[]> {
 	const [randomWords, obscureWords] = await Promise.all([
-		fetchRandomBaseWords(Math.ceil(count * 0.6)),
-		fetchFromObscureCategories(Math.ceil(count * 0.6))
+		fetchRandomBaseWords(count),
+		fetchFromObscureCategories(count)
 	]);
 	const all = [...new Set([...obscureWords, ...randomWords])];
+	shuffle(all);
 	return all.slice(0, count);
 }
 
 async function fetchRandomBaseWords(count: number): Promise<string[]> {
-	const words: string[] = [];
-	const maxAttempts = 5;
+	const limit = Math.min(Math.max(count * 3, 50), RANDOM_API_LIMIT);
 
-	for (let attempt = 0; attempt < maxAttempts && words.length < count; attempt++) {
-		if (attempt > 0) await delay(1000);
+	const data = await wiktionaryFetch<RandomResponse>(
+		new URLSearchParams({
+			action: 'query',
+			list: 'random',
+			rnnamespace: '0',
+			rnlimit: String(limit),
+			rnfilterredir: 'nonredirects',
+			format: 'json'
+		})
+	);
+	if (!data) return [];
 
-		const data = await wiktionaryFetch<RandomResponse>(
-			new URLSearchParams({
-				action: 'query',
-				list: 'random',
-				rnnamespace: '0',
-				rnlimit: '50',
-				rnfilterredir: 'nonredirects',
-				format: 'json'
-			})
-		);
-		if (!data) continue;
+	const candidates = data.query.random
+		.map((p) => p.title)
+		.filter((t) => WORD_RE.test(t) && t.length >= MIN_LENGTH);
 
-		const candidates = data.query.random
-			.map((p) => p.title)
-			.filter((t) => WORD_RE.test(t) && t.length >= MIN_LENGTH);
-
-		await delay(1000);
-		const acceptable = await filterAcceptableWords(candidates);
-		words.push(...acceptable);
-	}
-
-	return [...new Set(words)].slice(0, count);
+	return await filterAcceptableWords(candidates);
 }
 
 async function fetchFromObscureCategories(count: number): Promise<string[]> {
-	const words: string[] = [];
-	const perCategory = Math.ceil(count / OBSCURE_CATEGORIES.length);
+	const perCategory = Math.min(
+		Math.max(Math.ceil((count * 3) / OBSCURE_CATEGORIES.length), 50),
+		CATEGORY_API_LIMIT
+	);
 	const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-	for (const category of OBSCURE_CATEGORIES) {
-		if (words.length >= count) break;
+	const results = await Promise.all(
+		OBSCURE_CATEGORIES.map(async (category) => {
+			try {
+				const startLetter = letters[Math.floor(Math.random() * letters.length)];
+				const data = await wiktionaryFetch<CategoryMembersResponse>(
+					new URLSearchParams({
+						action: 'query',
+						list: 'categorymembers',
+						cmtitle: category,
+						cmnamespace: '0',
+						cmlimit: String(perCategory),
+						cmstartsortkeyprefix: startLetter,
+						format: 'json'
+					})
+				);
+				if (!data) return [];
 
-		try {
-			const startLetter = letters[Math.floor(Math.random() * letters.length)];
-			await delay(1000);
+				const members = data.query.categorymembers
+					.map((m) => m.title)
+					.filter((t) => WORD_RE.test(t) && t.length >= MIN_LENGTH);
+				shuffle(members);
+				return await filterAcceptableWords(members);
+			} catch {
+				return [];
+			}
+		})
+	);
 
-			const data = await wiktionaryFetch<CategoryMembersResponse>(
-				new URLSearchParams({
-					action: 'query',
-					list: 'categorymembers',
-					cmtitle: category,
-					cmnamespace: '0',
-					cmlimit: String(perCategory * 3),
-					cmstartsortkeyprefix: startLetter,
-					format: 'json'
-				})
-			);
-			if (!data) continue;
-
-			const members = data.query.categorymembers
-				.map((m) => m.title)
-				.filter((t) => WORD_RE.test(t) && t.length >= MIN_LENGTH);
-
-			shuffle(members);
-			await delay(1000);
-			const acceptable = await filterAcceptableWords(members.slice(0, perCategory));
-			words.push(...acceptable);
-		} catch {
-			// skip failed category
-		}
-	}
-
-	return words;
+	return results.flat();
 }
 
 async function filterAcceptableWords(titles: string[]): Promise<string[]> {
 	if (titles.length === 0) return [];
 
+	const result: string[] = [];
+	for (let i = 0; i < titles.length; i += TITLES_CHUNK) {
+		if (i > 0) await delay(FILTER_CHUNK_DELAY);
+		const chunk = titles.slice(i, i + TITLES_CHUNK);
+		result.push(...(await filterChunk(chunk)));
+	}
+	return result;
+}
+
+async function filterChunk(titles: string[]): Promise<string[]> {
 	const data = await wiktionaryFetch<PagesResponse>(
 		new URLSearchParams({
 			action: 'query',

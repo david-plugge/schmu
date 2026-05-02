@@ -1,6 +1,6 @@
 import { SqliteError } from 'better-sqlite3';
 import { db } from '$lib/server/db';
-import { questions } from '$lib/server/db/schema';
+import { questions, rejectedWords } from '$lib/server/db/schema';
 import type { generateDefinitions } from './definitions';
 
 export const LLM_BATCH_SIZE = 20;
@@ -15,6 +15,18 @@ export function getExistingWords(): string[] {
 		.map((q) => q.word);
 }
 
+export function getRejectedWords(): string[] {
+	return db
+		.select({ word: rejectedWords.word })
+		.from(rejectedWords)
+		.all()
+		.map((r) => r.word);
+}
+
+export function getSeenWords(): string[] {
+	return [...getExistingWords(), ...getRejectedWords()];
+}
+
 export function insertResults(results: GeneratedQuestion[]): number {
 	let inserted = 0;
 	for (const q of results) {
@@ -27,6 +39,20 @@ export function insertResults(results: GeneratedQuestion[]): number {
 					difficulty: q.difficulty
 				})
 				.run();
+			inserted++;
+		} catch (err) {
+			if (err instanceof SqliteError && err.code === 'SQLITE_CONSTRAINT_UNIQUE') continue;
+			throw err;
+		}
+	}
+	return inserted;
+}
+
+export function insertRejections(words: string[]): number {
+	let inserted = 0;
+	for (const word of words) {
+		try {
+			db.insert(rejectedWords).values({ word }).run();
 			inserted++;
 		} catch (err) {
 			if (err instanceof SqliteError && err.code === 'SQLITE_CONSTRAINT_UNIQUE') continue;

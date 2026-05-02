@@ -14,3 +14,10 @@ export const questions = sqliteTable('questions', {
 		.notNull()
 		.$defaultFn(() => new Date())
 });
+
+export const rejectedWords = sqliteTable('rejected_words', {
+	word: text('word').primaryKey(),
+	createdAt: integer('created_at', { mode: 'timestamp' })
+		.notNull()
+		.$defaultFn(() => new Date())
+});
