@@ -13,7 +13,8 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
 		"db:push": "drizzle-kit push",
-		"db:seed": "vite-node --options.transformMode.ssr='/.*/' src/lib/server/seed/index.ts"
+		"db:seed": "vite-node --options.transformMode.ssr='/.*/' src/lib/server/seed/index.ts",
+		"db:reseed": "vite-node --options.transformMode.ssr='/.*/' src/lib/server/seed/reseed-from-db.ts"
 	},
 	"devDependencies": {
 		"@ai-sdk/deepseek": "^2.0.32",
