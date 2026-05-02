@@ -7,20 +7,18 @@
 
 	type Props = {
 		code: string;
+		currentWord: string;
 		players: Player[];
 		isHost: boolean;
 		roundResults: NonNullable<GameState['roundResults']>;
 	};
-	let { code, players, isHost, roundResults: results }: Props = $props();
+	let { code, currentWord, players, isHost, roundResults: results }: Props = $props();
 </script>
 
 <div class="flex flex-col gap-6">
-	<!-- Correct answer reveal -->
-	<div class="rounded-xl border border-neon-green/40 bg-neon-green/10 p-6 text-center">
-		<p class="mb-2 text-sm font-medium text-neon-green">Die richtige Antwort:</p>
-		<p class="text-xl font-bold text-foreground">
-			{results.answers.find((a) => a.id === results.correctAnswerId)?.text}
-		</p>
+	<div class="rounded-xl border border-neon-purple/30 bg-card/80 p-6 text-center backdrop-blur-sm">
+		<p class="mb-2 text-sm text-muted-foreground">Was bedeutet...</p>
+		<p class="text-3xl font-black text-neon-yellow">{currentWord}</p>
 	</div>
 
 	<!-- All answers with attribution -->

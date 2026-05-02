@@ -58,6 +58,7 @@
 		{:else if gameState.phase === 'scoring' && gameState.roundResults}
 			<ScoringPhase
 				code={params.code}
+				currentWord={gameState.currentWord!}
 				players={gameState.players}
 				isHost={currentPlayer?.isHost ?? false}
 				roundResults={gameState.roundResults}
