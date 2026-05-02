@@ -1,23 +1,25 @@
-You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
+# schmu
 
-## Available Svelte MCP Tools:
+Multiplayer word-bluff game (SvelteKit + SQLite). Players invent fake definitions for obscure words and vote.
 
-### 1. list-sections
+## Stack
 
-Use this FIRST to discover all available documentation sections. Returns a structured list with titles, use_cases, and paths.
-When asked about Svelte or SvelteKit topics, ALWAYS use this tool at the start of the chat to find relevant sections.
+- **SvelteKit** with Node adapter; **Svelte 5 runes** (no legacy syntax)
+- **Experimental flags on**: `kit.experimental.remoteFunctions` (`*.remote.ts`) and `compilerOptions.experimental.async` (await in components/$derived)
+- **Drizzle ORM** + `better-sqlite3` (`./data/schmu.db`); schema at `src/lib/server/db/schema.ts`
+- **Tailwind v4** + `bits-ui` (shadcn-style components in `src/lib/components/ui`)
+- **AI SDK** (`ai` + `@ai-sdk/deepseek`) for question generation
+- **pnpm** only; use package.json scripts (`dev`, `check`, `lint`, `format`, `db:push`, `db:seed`)
 
-### 2. get-documentation
+## Layout
 
-Retrieves full documentation content for specific sections. Accepts single or multiple sections.
-After calling the list-sections tool, you MUST analyze the returned documentation sections (especially the use_cases field) and then use the get-documentation tool to fetch ALL documentation sections that are relevant for the user's task.
+- `src/lib/server/` — `game-manager.ts` (in-memory game state), `game.ts`, `session.ts`, `ai.ts`, `db/`
+- `src/routes/games/[code]/` — game UI; remote functions in `*.remote.ts`
+- `src/lib/types.ts` — shared `GameState`/`Player`/`Round` types
 
-### 3. svelte-autofixer
+## Svelte MCP — mandatory when touching Svelte/SvelteKit
 
-Analyzes Svelte code and returns issues and suggestions.
-You MUST use this tool whenever writing Svelte code before sending it to the user. Keep calling it until no issues or suggestions are returned.
-
-### 4. playground-link
-
-Generates a Svelte Playground link with the provided code.
-After completing the code, ask the user if they want a playground link. Only call this tool after user confirmation and NEVER if code was written to files in their project.
+1. `list-sections` first to find relevant docs
+2. `get-documentation` for every relevant section before writing code
+3. `svelte-autofixer` on any Svelte code you produce; loop until clean
+4. `playground-link` only if user asks AND code wasn't written to files
