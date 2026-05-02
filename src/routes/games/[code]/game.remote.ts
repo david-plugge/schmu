@@ -62,9 +62,9 @@ export const submitVote = command(
 	}
 );
 
-export const startNextRound = command(z.object({ code: z.string() }), async ({ code }) => {
+export const startNextRound = command(z.object({ code: z.string() }), ({ code }) => {
 	assertSession();
 	const game = assertGame(code);
 
-	await game.nextRound();
+	game.nextRound();
 });

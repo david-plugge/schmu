@@ -1,5 +1,5 @@
 import type { GamePhase, GameState, Player, Question, Round } from '$lib/types';
-import { generateQuestionBatch } from './ai';
+import { getRandomQuestions } from './db/questions';
 
 type GameStateListener = (state: GameState) => void;
 
@@ -16,14 +16,12 @@ export class GameInstance {
 	private currentRound: Round | null = null;
 	private readonly rounds: Round[] = [];
 
-	private refillPromise?: Promise<void>;
-
 	constructor(code: string) {
 		this.code = code;
 		this.phase = 'lobby';
 	}
 
-	private async transitionTo(phase: GamePhase) {
+	private transitionTo(phase: GamePhase) {
 		if (this.phase === phase) return;
 		console.log(`[${this.code}] Transition: ${this.phase} -> ${phase}`);
 		this.phase = phase;
@@ -58,12 +56,12 @@ export class GameInstance {
 		this.notify();
 	}
 
-	public async startGame(playerId: string) {
+	public startGame(playerId: string) {
 		if (this.phase !== 'lobby') return;
 		const player = this.players.get(playerId);
 		if (player?.isHost !== true) return;
 
-		await this.nextRound();
+		this.nextRound();
 	}
 
 	public endGame() {
@@ -110,13 +108,9 @@ export class GameInstance {
 		}
 	}
 
-	public async nextRound() {
+	public nextRound() {
 		try {
-			const timeoutId = setTimeout(() => {
-				this.transitionTo('loading-question');
-			}, 250);
-			await this.setupNewRound();
-			clearTimeout(timeoutId);
+			this.setupNewRound();
 			this.transitionTo('writing');
 		} catch {
 			this.transitionTo('error');
@@ -195,8 +189,8 @@ export class GameInstance {
 		this.rounds.push(this.currentRound);
 	}
 
-	private async setupNewRound() {
-		const question = await this.getNextQuestion();
+	private setupNewRound() {
+		const question = this.getNextQuestion();
 		if (!question) {
 			throw new Error('unable to load next question');
 		}
@@ -221,22 +215,16 @@ export class GameInstance {
 		});
 	}
 
-	private async getNextQuestion() {
-		await this.refillPromise;
-
+	private getNextQuestion() {
 		if (!this.questionQueue.length) {
-			await this.loadQuestions();
-		}
-		if (this.questionQueue.length < 3) {
-			// load in the background
-			this.refillPromise = this.loadQuestions();
+			this.loadQuestions();
 		}
 
 		return this.questionQueue.shift();
 	}
 
-	private async loadQuestions() {
-		const newQuestions = await generateQuestionBatch(5, this.getUsedWords());
+	private loadQuestions() {
+		const newQuestions = getRandomQuestions(5, this.getUsedWords());
 		this.questionQueue.push(...newQuestions);
 	}
 
