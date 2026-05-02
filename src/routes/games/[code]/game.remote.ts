@@ -51,6 +51,18 @@ export const submitAnswer = form(
 	}
 );
 
+export const downvoteQuestion = command(z.string(), (code) => {
+	const session = assertSession();
+	const game = assertGame(code);
+	game.downvoteQuestion(session.id);
+});
+
+export const skipWord = command(z.string(), (code) => {
+	const session = assertSession();
+	const game = assertGame(code);
+	game.skipWord(session.id);
+});
+
 export const submitVote = command(
 	z.object({
 		code: z.string(),

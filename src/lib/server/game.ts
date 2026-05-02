@@ -75,7 +75,8 @@ export class GameInstance {
 			isHost,
 			score: 0,
 			hasSubmitted: false,
-			hasVoted: false
+			hasVoted: false,
+			hasSkipped: false
 		});
 		this.notify();
 	}
@@ -121,6 +122,36 @@ export class GameInstance {
 		}
 	}
 
+	public downvoteQuestion(playerId: string) {
+		if (this.phase !== 'writing' || !this.currentRound) return;
+		const player = this.players.get(playerId);
+		if (!player) return;
+
+		const previousVote = this.currentRound.questionVotes[playerId];
+		if (previousVote === 'down') {
+			delete this.currentRound.questionVotes[playerId];
+			voteQuestion(this.currentRound.questionId, 1);
+		} else {
+			this.currentRound.questionVotes[playerId] = 'down';
+			voteQuestion(this.currentRound.questionId, -1);
+		}
+		this.notify();
+	}
+
+	public skipWord(playerId: string) {
+		if (this.phase !== 'writing' || !this.currentRound) return;
+		const player = this.players.get(playerId);
+		if (!player) return;
+
+		player.hasSkipped = !player.hasSkipped;
+
+		if (this.players.values().every((p) => p.hasSkipped)) {
+			this.nextRound();
+		} else {
+			this.notify();
+		}
+	}
+
 	public submitVote(playerId: string, answerId: string) {
 		if (this.phase !== 'voting' || !this.currentRound) return;
 		const player = this.players.get(playerId);
@@ -161,8 +192,13 @@ export class GameInstance {
 
 	public nextRound() {
 		try {
+			const wasWriting = this.phase === 'writing';
 			this.setupNewRound();
-			this.transitionTo('writing');
+			if (wasWriting) {
+				this.notify();
+			} else {
+				this.transitionTo('writing');
+			}
 		} catch (err) {
 			console.error(`[${this.code}] nextRound failed:`, err);
 			this.transitionTo('error');
@@ -186,11 +222,8 @@ export class GameInstance {
 	}
 
 	private getGameState(viewerPlayerId: string): GameState {
-		const shuffleSeed = this.currentRound
-			? `${viewerPlayerId}:${this.currentRound.questionId}`
-			: '';
 		const shuffledAnswers = this.currentRound
-			? shuffleSeeded(this.currentRound.answers, shuffleSeed)
+			? shuffleSeeded(this.currentRound.answers, String(this.currentRound.questionId))
 			: [];
 
 		return {
@@ -198,6 +231,10 @@ export class GameInstance {
 			phase: this.phase,
 			players: this.players.values().toArray(),
 			currentRound: this.rounds.length + 1,
+			hasDownvotedQuestion:
+				this.phase === 'writing' && this.currentRound
+					? this.currentRound.questionVotes[viewerPlayerId] === 'down'
+					: undefined,
 			possibleAnswers:
 				(this.phase === 'reading' || this.phase === 'voting') && this.currentRound
 					? shuffledAnswers.map((a) => ({
@@ -287,6 +324,7 @@ export class GameInstance {
 		this.players.forEach((player) => {
 			player.hasSubmitted = false;
 			player.hasVoted = false;
+			player.hasSkipped = false;
 		});
 	}
 

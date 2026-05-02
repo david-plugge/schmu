@@ -63,9 +63,7 @@
 							<span
 								class={cn(
 									'rounded-full px-2 py-0.5 text-xs font-bold',
-									isCorrect
-										? 'bg-neon-green/20 text-neon-green'
-										: 'bg-neon-pink/20 text-neon-pink'
+									isCorrect ? 'bg-neon-green/20 text-neon-green' : 'bg-neon-pink/20 text-neon-pink'
 								)}
 							>
 								{name}

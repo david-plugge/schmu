@@ -16,6 +16,7 @@ export interface Player {
 	isHost: boolean;
 	hasSubmitted: boolean;
 	hasVoted: boolean;
+	hasSkipped: boolean;
 }
 
 export interface GameState {
@@ -24,6 +25,7 @@ export interface GameState {
 	phase: GamePhase;
 	currentRound: number;
 	currentWord?: string;
+	hasDownvotedQuestion?: boolean;
 	possibleAnswers?: Array<{
 		id: string;
 		text: string;

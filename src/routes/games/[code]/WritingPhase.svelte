@@ -2,15 +2,23 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import type { Player } from '$lib/types';
-	import { submitAnswer } from './game.remote';
+	import { ThumbsDown, SkipForward } from '@lucide/svelte';
+	import { cn } from '$lib/utils';
+	import { submitAnswer, downvoteQuestion, skipWord } from './game.remote';
 
 	type Props = {
 		code: string;
 		currentWord: string;
 		currentPlayer: Player;
 		players: Player[];
+		hasDownvotedQuestion: boolean;
 	};
-	let { code, currentWord, currentPlayer, players }: Props = $props();
+	let { code, currentWord, currentPlayer, players, hasDownvotedQuestion }: Props = $props();
+
+	let skipCount = $derived(players.filter((p) => p.hasSkipped).length);
+
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	const { value: _, ...inputField } = $derived(submitAnswer.fields.answer.as('text'));
 </script>
 
 {#if currentPlayer.hasSubmitted}
@@ -33,7 +41,7 @@
 		<form {...submitAnswer} class="flex flex-col gap-3">
 			<input {...submitAnswer.fields.code.as('hidden', code)} />
 			<Input
-				{...submitAnswer.fields.answer.as('text')}
+				{...inputField}
 				placeholder="Deine kreative Antwort..."
 				class="border-neon-purple/30 bg-background/50 text-lg placeholder:text-muted-foreground/50 focus:border-neon-pink"
 			/>
@@ -44,5 +52,35 @@
 				Abschicken
 			</Button>
 		</form>
+
+		<div class="flex items-center justify-center gap-3">
+			<button
+				onclick={() => downvoteQuestion(code)}
+				class={cn(
+					'flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm transition-colors',
+					hasDownvotedQuestion
+						? 'bg-neon-pink/20 text-neon-pink'
+						: 'text-muted-foreground hover:bg-neon-pink/10 hover:text-neon-pink'
+				)}
+			>
+				<ThumbsDown size={16} />
+				Schlechtes Wort
+			</button>
+			<button
+				onclick={() => skipWord(code)}
+				class={cn(
+					'flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm transition-colors',
+					currentPlayer.hasSkipped
+						? 'bg-neon-purple/20 text-neon-purple'
+						: 'text-muted-foreground hover:bg-neon-purple/10 hover:text-neon-purple'
+				)}
+			>
+				<SkipForward size={16} />
+				Überspringen
+				{#if skipCount > 0}
+					({skipCount}/{players.length})
+				{/if}
+			</button>
+		</div>
 	</div>
 {/if}

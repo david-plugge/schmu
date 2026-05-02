@@ -47,6 +47,7 @@
 				currentWord={gameState.currentWord!}
 				{currentPlayer}
 				players={gameState.players}
+				hasDownvotedQuestion={gameState.hasDownvotedQuestion ?? false}
 			/>
 		{:else if gameState.phase === 'voting' && currentPlayer && gameState.possibleAnswers}
 			<VotingPhase
