@@ -1,18 +1,7 @@
-import {
-	extractBase,
-	findPlayer,
-	isHost,
-	questionVoteDelta,
-	toggleVote,
-	updatePlayer
-} from '../helpers';
-import type {
-	Action,
-	ActionType,
-	InternalAnswer,
-	TransitionResult,
-	ViewerGameState
-} from '../types';
+import { extractBase, findPlayer, updatePlayer } from '../helpers';
+import { addAnswer } from '../round';
+import type { Action, ActionType, TransitionResult, ViewerGameState } from '../types';
+import { handleEndGame, handleToggleQuestionVote } from './shared';
 import type { PhaseRecord, StateOf } from './types';
 
 const accepts: ReadonlySet<ActionType> = new Set([
@@ -30,15 +19,11 @@ function reduce(state: StateOf<'writing'>, action: Action): TransitionResult {
 			if (player.hasSubmitted) return { state, effects: [] };
 			if (action.text.length === 0) return { state, effects: [] };
 
-			const newAnswer: InternalAnswer = {
+			const newRound = addAnswer(state.currentRound, {
 				id: action.answerId,
 				owner: { type: 'player', playerId: player.id },
 				text: action.text
-			};
-			const newRound = {
-				...state.currentRound,
-				answers: [...state.currentRound.answers, newAnswer]
-			};
+			});
 			const newPlayers = updatePlayer(state.players, player.id, { hasSubmitted: true });
 
 			const allSubmitted = newPlayers.every((p) => p.hasSubmitted);
@@ -93,47 +78,10 @@ function reduce(state: StateOf<'writing'>, action: Action): TransitionResult {
 				effects: []
 			};
 		}
-		case 'toggle-question-vote': {
-			const player = findPlayer(state, action.playerId);
-			if (!player) return { state, effects: [] };
-
-			const prev = state.currentRound.questionVotes[player.id];
-			const next = toggleVote(prev, action.vote);
-			const delta = questionVoteDelta(prev, next);
-
-			const newQuestionVotes = { ...state.currentRound.questionVotes };
-			if (next === undefined) {
-				delete newQuestionVotes[player.id];
-			} else {
-				newQuestionVotes[player.id] = next;
-			}
-
-			const effects =
-				delta === 0
-					? []
-					: [
-							{
-								type: 'vote-question' as const,
-								questionId: state.currentRound.questionId,
-								delta
-							}
-						];
-
-			return {
-				state: {
-					...state,
-					currentRound: { ...state.currentRound, questionVotes: newQuestionVotes }
-				},
-				effects
-			};
-		}
-		case 'end-game': {
-			if (!isHost(state, action.playerId)) return { state, effects: [] };
-			return {
-				state: { ...extractBase(state), phase: 'ended' },
-				effects: []
-			};
-		}
+		case 'toggle-question-vote':
+			return handleToggleQuestionVote(state, action);
+		case 'end-game':
+			return handleEndGame(state, action);
 	}
 	return { state, effects: [] };
 }

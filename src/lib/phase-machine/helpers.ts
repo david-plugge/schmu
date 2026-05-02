@@ -1,5 +1,5 @@
 import type { CategorySlug } from '$lib/categories';
-import type { InternalPlayer, InternalRound, InternalState, Vote } from './types';
+import type { InternalPlayer, InternalState } from './types';
 
 export interface BaseFields {
 	code: string;
@@ -18,9 +18,6 @@ export function extractBase(state: InternalState): BaseFields {
 		usedWords: state.usedWords
 	};
 }
-
-export const CORRECT_ANSWER_REWARD = 2;
-export const FOOLED_ANSWER_REWARD = 3;
 
 export function hashSeed(s: string): number {
 	let h = 2166136261;
@@ -77,21 +74,6 @@ export function resetRoundFlags(players: InternalPlayer[]): InternalPlayer[] {
 	}));
 }
 
-export function calculateRewardedPoints(round: InternalRound): Record<string, number> {
-	const rewardedPoints: Record<string, number> = {};
-	for (const playerId in round.playerVotes) {
-		const answer = round.answers.find((a) => a.id === round.playerVotes[playerId]);
-		if (!answer) continue;
-		if (answer.owner.type === 'system') {
-			rewardedPoints[playerId] = (rewardedPoints[playerId] ?? 0) + CORRECT_ANSWER_REWARD;
-		} else {
-			rewardedPoints[answer.owner.playerId] =
-				(rewardedPoints[answer.owner.playerId] ?? 0) + FOOLED_ANSWER_REWARD;
-		}
-	}
-	return rewardedPoints;
-}
-
 export function applyRewards(
 	players: InternalPlayer[],
 	rewardedPoints: Record<string, number>
@@ -99,14 +81,4 @@ export function applyRewards(
 	return players.map((p) =>
 		rewardedPoints[p.id] != null ? { ...p, score: p.score + rewardedPoints[p.id] } : p
 	);
-}
-
-export function toggleVote(prev: Vote | undefined, next: Vote): Vote | undefined {
-	return prev === next ? undefined : next;
-}
-
-export function questionVoteDelta(prev: Vote | undefined, next: Vote | undefined): number {
-	const prevValue = prev === 'up' ? 1 : prev === 'down' ? -1 : 0;
-	const nextValue = next === 'up' ? 1 : next === 'down' ? -1 : 0;
-	return nextValue - prevValue;
 }

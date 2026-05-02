@@ -7,6 +7,7 @@ import type {
 	TransitionResult,
 	ViewerGameState
 } from '../types';
+import { handleEndGame } from './shared';
 import type { PhaseRecord, StateOf } from './types';
 
 const accepts: ReadonlySet<ActionType> = new Set([
@@ -66,13 +67,8 @@ function reduce(state: StateOf<'lobby'>, action: Action): TransitionResult {
 				]
 			};
 		}
-		case 'end-game': {
-			if (!isHost(state, action.playerId)) return { state, effects: [] };
-			return {
-				state: { ...extractBase(state), phase: 'ended' },
-				effects: []
-			};
-		}
+		case 'end-game':
+			return handleEndGame(state, action);
 	}
 	return { state, effects: [] };
 }

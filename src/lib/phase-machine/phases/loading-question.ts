@@ -1,4 +1,4 @@
-import { extractBase, isHost, resetRoundFlags } from '../helpers';
+import { extractBase, resetRoundFlags } from '../helpers';
 import type {
 	Action,
 	ActionType,
@@ -6,6 +6,7 @@ import type {
 	TransitionResult,
 	ViewerGameState
 } from '../types';
+import { handleEndGame } from './shared';
 import type { PhaseRecord, StateOf } from './types';
 
 const accepts: ReadonlySet<ActionType> = new Set([
@@ -55,13 +56,8 @@ function reduce(state: StateOf<'loading-question'>, action: Action): TransitionR
 				effects: []
 			};
 		}
-		case 'end-game': {
-			if (!isHost(state, action.playerId)) return { state, effects: [] };
-			return {
-				state: { ...extractBase(state), phase: 'ended' },
-				effects: []
-			};
-		}
+		case 'end-game':
+			return handleEndGame(state, action);
 	}
 	return { state, effects: [] };
 }

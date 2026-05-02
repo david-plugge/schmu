@@ -1,11 +1,4 @@
-import {
-	extractBase,
-	findPlayer,
-	isHost,
-	questionVoteDelta,
-	shuffleSeeded,
-	toggleVote
-} from '../helpers';
+import { extractBase, isHost, shuffleSeeded } from '../helpers';
 import type {
 	Action,
 	ActionType,
@@ -14,6 +7,7 @@ import type {
 	ViewerGameState,
 	ViewerRoundResults
 } from '../types';
+import { handleEndGame, handleToggleQuestionVote } from './shared';
 import type { PhaseRecord, StateOf } from './types';
 
 const accepts: ReadonlySet<ActionType> = new Set([
@@ -24,40 +18,8 @@ const accepts: ReadonlySet<ActionType> = new Set([
 
 function reduce(state: StateOf<'scoring'>, action: Action): TransitionResult {
 	switch (action.type) {
-		case 'toggle-question-vote': {
-			const player = findPlayer(state, action.playerId);
-			if (!player) return { state, effects: [] };
-
-			const prev = state.currentRound.questionVotes[player.id];
-			const next = toggleVote(prev, action.vote);
-			const delta = questionVoteDelta(prev, next);
-
-			const newQuestionVotes = { ...state.currentRound.questionVotes };
-			if (next === undefined) {
-				delete newQuestionVotes[player.id];
-			} else {
-				newQuestionVotes[player.id] = next;
-			}
-
-			const effects =
-				delta === 0
-					? []
-					: [
-							{
-								type: 'vote-question' as const,
-								questionId: state.currentRound.questionId,
-								delta
-							}
-						];
-
-			return {
-				state: {
-					...state,
-					currentRound: { ...state.currentRound, questionVotes: newQuestionVotes }
-				},
-				effects
-			};
-		}
+		case 'toggle-question-vote':
+			return handleToggleQuestionVote(state, action);
 		case 'next-round': {
 			if (!isHost(state, action.playerId)) return { state, effects: [] };
 			const newUsedWords = [...state.usedWords, state.currentRound.word];
@@ -79,13 +41,8 @@ function reduce(state: StateOf<'scoring'>, action: Action): TransitionResult {
 				]
 			};
 		}
-		case 'end-game': {
-			if (!isHost(state, action.playerId)) return { state, effects: [] };
-			return {
-				state: { ...extractBase(state), phase: 'ended' },
-				effects: []
-			};
-		}
+		case 'end-game':
+			return handleEndGame(state, action);
 	}
 	return { state, effects: [] };
 }

@@ -1,13 +1,7 @@
-import {
-	applyRewards,
-	calculateRewardedPoints,
-	extractBase,
-	findPlayer,
-	isHost,
-	shuffleSeeded,
-	updatePlayer
-} from '../helpers';
+import { applyRewards, extractBase, findPlayer, shuffleSeeded, updatePlayer } from '../helpers';
+import { calculateRewardedPoints, recordPlayerVote, withRewardedPoints } from '../round';
 import type { Action, ActionType, TransitionResult, ViewerAnswer, ViewerGameState } from '../types';
+import { handleEndGame } from './shared';
 import type { PhaseRecord, StateOf } from './types';
 
 const accepts: ReadonlySet<ActionType> = new Set(['submit-vote', 'end-game']);
@@ -19,24 +13,13 @@ function reduce(state: StateOf<'voting'>, action: Action): TransitionResult {
 			if (!player) return { state, effects: [] };
 			if (player.hasVoted) return { state, effects: [] };
 
-			const answer = state.currentRound.answers.find((a) => a.id === action.answerId);
-			if (!answer) return { state, effects: [] };
-			if (answer.owner.type === 'player' && answer.owner.playerId === player.id) {
-				return { state, effects: [] };
-			}
+			const newRound = recordPlayerVote(state.currentRound, player.id, action.answerId);
+			if (!newRound) return { state, effects: [] };
 
-			const newPlayerVotes = {
-				...state.currentRound.playerVotes,
-				[player.id]: answer.id
-			};
 			const newPlayers = updatePlayer(state.players, player.id, { hasVoted: true });
 
 			const allVoted = newPlayers.every((p) => p.hasVoted);
 			if (allVoted) {
-				const newRound = {
-					...state.currentRound,
-					playerVotes: newPlayerVotes
-				};
 				const rewardedPoints = calculateRewardedPoints(newRound);
 				const playersWithScores = applyRewards(newPlayers, rewardedPoints);
 				return {
@@ -44,27 +27,18 @@ function reduce(state: StateOf<'voting'>, action: Action): TransitionResult {
 						...extractBase(state),
 						players: playersWithScores,
 						phase: 'scoring',
-						currentRound: { ...newRound, rewardedPoints }
+						currentRound: withRewardedPoints(newRound, rewardedPoints)
 					},
 					effects: []
 				};
 			}
 			return {
-				state: {
-					...state,
-					players: newPlayers,
-					currentRound: { ...state.currentRound, playerVotes: newPlayerVotes }
-				},
+				state: { ...state, players: newPlayers, currentRound: newRound },
 				effects: []
 			};
 		}
-		case 'end-game': {
-			if (!isHost(state, action.playerId)) return { state, effects: [] };
-			return {
-				state: { ...extractBase(state), phase: 'ended' },
-				effects: []
-			};
-		}
+		case 'end-game':
+			return handleEndGame(state, action);
 	}
 	return { state, effects: [] };
 }
