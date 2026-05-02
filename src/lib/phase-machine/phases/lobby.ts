@@ -1,12 +1,6 @@
 import { CATEGORY_SLUGS, type CategorySlug } from '$lib/categories';
 import { extractBase, isHost } from '../helpers';
-import type {
-	Action,
-	ActionType,
-	InternalPlayer,
-	TransitionResult,
-	ViewerGameState
-} from '../types';
+import type { Action, ActionType, Player, TransitionResult, ViewerGameState } from '../types';
 import { handleEndGame } from './shared';
 import type { PhaseRecord, StateOf } from './types';
 
@@ -23,7 +17,7 @@ function reduce(state: StateOf<'lobby'>, action: Action): TransitionResult {
 			if (state.players.some((p) => p.id === action.playerId)) {
 				return { state, effects: [] };
 			}
-			const newPlayer: InternalPlayer = {
+			const newPlayer: Player = {
 				id: action.playerId,
 				name: action.name,
 				isHost: action.isHost,
@@ -72,11 +66,12 @@ function reduce(state: StateOf<'lobby'>, action: Action): TransitionResult {
 	return { state, effects: [] };
 }
 
-function project(state: StateOf<'lobby'>): ViewerGameState {
+function project(state: StateOf<'lobby'>, viewerId: string): ViewerGameState {
 	return {
 		phase: 'lobby',
 		code: state.code,
-		players: state.players.map((p) => ({ ...p })),
+		players: state.players,
+		you: state.players.find((p) => p.id === viewerId)!,
 		currentRoundNumber: state.roundIndex + 1,
 		enabledCategories: [...state.enabledCategories]
 	};

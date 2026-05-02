@@ -12,7 +12,7 @@ const cookieOptions: CookieOpts = {
 	httpOnly: true
 };
 
-interface Session {
+export interface Session {
 	id: string;
 	username: string;
 }

@@ -4,16 +4,15 @@ export type {
 	AnswerOwner,
 	Effect,
 	InternalAnswer,
-	InternalPlayer,
 	InternalRound,
 	InternalState,
 	Phase,
+	Player,
 	Question,
 	TransitionResult,
 	ViewerAnswer,
 	ViewerAnswerOwner,
 	ViewerGameState,
-	ViewerPlayer,
 	ViewerRoundResults,
 	Vote
 } from './types';

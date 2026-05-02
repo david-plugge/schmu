@@ -1,14 +1,8 @@
 import { CATEGORY_SLUGS, type CategorySlug } from '$lib/categories';
 import { expect } from 'vitest';
-import type {
-	Effect,
-	InternalAnswer,
-	InternalPlayer,
-	InternalRound,
-	InternalState
-} from '../types';
+import type { Effect, InternalAnswer, Player, InternalRound, InternalState } from '../types';
 
-export function makePlayer(overrides: Partial<InternalPlayer> = {}): InternalPlayer {
+export function makePlayer(overrides: Partial<Player> = {}): Player {
 	return {
 		id: 'p1',
 		name: 'Player 1',
@@ -46,7 +40,7 @@ export function makePlayerAnswer(id: string, playerId: string, text: string): In
 
 interface BaseStateInput {
 	code?: string;
-	players?: InternalPlayer[];
+	players?: Player[];
 	enabledCategories?: CategorySlug[];
 	roundIndex?: number;
 }

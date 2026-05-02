@@ -24,11 +24,12 @@ function reduce(state: StateOf<'error'>, action: Action): TransitionResult {
 	return { state, effects: [] };
 }
 
-function project(state: StateOf<'error'>): ViewerGameState {
+function project(state: StateOf<'error'>, viewerId: string): ViewerGameState {
 	return {
 		phase: 'error',
 		code: state.code,
-		players: state.players.map((p) => ({ ...p })),
+		players: state.players,
+		you: state.players.find((p) => p.id === viewerId)!,
 		currentRoundNumber: state.roundIndex + 1,
 		reason: state.reason
 	};

@@ -62,11 +62,12 @@ function reduce(state: StateOf<'loading-question'>, action: Action): TransitionR
 	return { state, effects: [] };
 }
 
-function project(state: StateOf<'loading-question'>): ViewerGameState {
+function project(state: StateOf<'loading-question'>, viewerId: string): ViewerGameState {
 	return {
 		phase: 'loading-question',
 		code: state.code,
-		players: state.players.map((p) => ({ ...p })),
+		players: state.players,
+		you: state.players.find((p) => p.id === viewerId)!,
 		currentRoundNumber: state.roundIndex + 1
 	};
 }

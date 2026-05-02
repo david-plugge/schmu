@@ -16,6 +16,16 @@ export interface DispatcherDeps {
 
 type Listener = () => void;
 
+export class NotAMemberError extends Error {
+	constructor(
+		public readonly code: string,
+		public readonly viewerId: string
+	) {
+		super(`viewer ${viewerId} is not a member of game ${code}`);
+		this.name = 'NotAMemberError';
+	}
+}
+
 export class GameDispatcher {
 	private state: InternalState;
 	private readonly listeners = new Set<Listener>();
@@ -36,6 +46,9 @@ export class GameDispatcher {
 	}
 
 	subscribe(viewerId: string, sub: (state: ViewerGameState) => void): () => void {
+		if (!this.state.players.some((p) => p.id === viewerId)) {
+			throw new NotAMemberError(this.code, viewerId);
+		}
 		const listener: Listener = () => sub(project(this.state, viewerId));
 		this.listeners.add(listener);
 		listener();

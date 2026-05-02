@@ -1,13 +1,11 @@
 <script lang="ts">
-	import { getLoggedInUser } from '../../setup.remote';
-	import type { ViewerPlayer } from '$lib/phase-machine';
+	import type { Player } from '$lib/phase-machine';
 
 	type Props = {
-		players: ViewerPlayer[];
+		players: Player[];
+		you: Player;
 	};
-	let { players }: Props = $props();
-
-	const user = $derived(await getLoggedInUser());
+	let { players, you }: Props = $props();
 </script>
 
 <div
@@ -23,7 +21,7 @@
 		]}
 		<div class="flex items-center gap-3 rounded-lg border px-3 py-2 {colors[i % colors.length]}">
 			<span class="text-lg font-bold">{player.name}</span>
-			{#if player.id === user.id}
+			{#if player.id === you.id}
 				<span class="rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium">ich</span>
 			{/if}
 			{#if player.isHost}

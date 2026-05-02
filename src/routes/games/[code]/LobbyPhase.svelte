@@ -1,19 +1,15 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import type { ViewerPlayer } from '$lib/phase-machine';
-	import type { CategorySlug } from '$lib/categories';
+	import type { ViewerGameState } from '$lib/phase-machine';
 	import PlayerList from './PlayerList.svelte';
 	import CategoryPicker from './CategoryPicker.svelte';
 	import { startGame } from './game.remote';
 	import { page } from '$app/state';
 
 	type Props = {
-		code: string;
-		players: ViewerPlayer[];
-		isHost: boolean;
-		enabledCategories: CategorySlug[];
+		state: Extract<ViewerGameState, { phase: 'lobby' }>;
 	};
-	let { code, players, isHost, enabledCategories }: Props = $props();
+	let { state }: Props = $props();
 </script>
 
 <div class="flex flex-col gap-6">
@@ -27,30 +23,30 @@
 		<p class="mt-1 text-sm text-muted-foreground">Warteraum</p>
 	</div>
 
-	<PlayerList {players} />
+	<PlayerList players={state.players} you={state.you} />
 
-	<CategoryPicker {code} enabled={enabledCategories} {isHost} />
+	<CategoryPicker code={state.code} enabled={state.enabledCategories} isHost={state.you.isHost} />
 
 	<div class="grid gap-2 md:grid-cols-2">
 		<Button
 			variant="outline"
-			onclick={() => navigator.clipboard.writeText(`${page.url.origin}/games/${code}`)}
+			onclick={() => navigator.clipboard.writeText(`${page.url.origin}/games/${state.code}`)}
 			class="truncate border-neon-purple/30 text-muted-foreground hover:border-neon-cyan hover:text-neon-cyan"
 		>
-			{`${page.url.origin}/games/${code}`}
+			{`${page.url.origin}/games/${state.code}`}
 		</Button>
 		<Button
 			variant="outline"
-			onclick={() => navigator.clipboard.writeText(code)}
+			onclick={() => navigator.clipboard.writeText(state.code)}
 			class="border-neon-purple/30 font-mono text-lg tracking-widest text-neon-yellow hover:border-neon-yellow"
 		>
-			{code}
+			{state.code}
 		</Button>
 	</div>
 
-	{#if isHost}
+	{#if state.you.isHost}
 		<Button
-			onclick={() => startGame(code)}
+			onclick={() => startGame({ code: state.code })}
 			class="bg-neon-pink text-lg font-bold text-white shadow-md shadow-neon-pink/25 hover:bg-neon-pink/85"
 		>
 			Spiel starten!

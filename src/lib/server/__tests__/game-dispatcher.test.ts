@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Question } from '$lib/phase-machine';
-import { GameDispatcher, type DispatcherDeps } from '../game-dispatcher';
+import { GameDispatcher, NotAMemberError, type DispatcherDeps } from '../game-dispatcher';
 import type { QuestionCatalogue } from '../question-catalogue';
 
 function makeCatalogue(overrides: Partial<QuestionCatalogue> = {}): QuestionCatalogue {
@@ -26,21 +26,31 @@ const Q: Question = { id: 42, word: 'Schmu', definition: 'Real definition' };
 describe('GameDispatcher', () => {
 	it('subscribe fires immediately with current viewer state', () => {
 		const d = new GameDispatcher('ABCD', makeDeps());
+		d.dispatch({ type: 'add-player', playerId: 'p1', name: 'Alice', isHost: true });
 		const cb = vi.fn();
 		d.subscribe('p1', cb);
 		expect(cb).toHaveBeenCalledTimes(1);
 		expect(cb.mock.calls[0][0].phase).toBe('lobby');
 	});
 
+	it('subscribe throws NotAMemberError for non-member viewers', () => {
+		const d = new GameDispatcher('ABCD', makeDeps());
+		expect(() => d.subscribe('stranger', vi.fn())).toThrow(NotAMemberError);
+		// even after a member joins, the stranger is still rejected
+		d.dispatch({ type: 'add-player', playerId: 'p1', name: 'Alice', isHost: true });
+		expect(() => d.subscribe('stranger', vi.fn())).toThrow(NotAMemberError);
+	});
+
 	it('dispatches actions and notifies subscribers on state change', () => {
 		const d = new GameDispatcher('ABCD', makeDeps());
+		d.dispatch({ type: 'add-player', playerId: 'p1', name: 'Alice', isHost: true });
 		const cb = vi.fn();
 		d.subscribe('p1', cb);
 		cb.mockClear();
-		d.dispatch({ type: 'add-player', playerId: 'p1', name: 'Alice', isHost: true });
+		d.dispatch({ type: 'add-player', playerId: 'p2', name: 'Bob', isHost: false });
 		expect(cb).toHaveBeenCalledTimes(1);
 		expect(cb.mock.calls[0][0].phase).toBe('lobby');
-		expect(cb.mock.calls[0][0].players).toHaveLength(1);
+		expect(cb.mock.calls[0][0].players).toHaveLength(2);
 	});
 
 	it('does not notify when reducer rejects an action', () => {

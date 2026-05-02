@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { getLoggedInUser } from '../../setup.remote';
 	import { backToLobby, getGame } from './game.remote';
 	import LobbyPhase from './LobbyPhase.svelte';
 	import ScoringPhase from './ScoringPhase.svelte';
@@ -9,13 +8,8 @@
 
 	let { params } = $props();
 
-	const user = $derived(await getLoggedInUser());
-
 	const gameStateLive = $derived(getGame(params.code));
 	const gameState = $derived(await gameStateLive);
-	const currentPlayer = $derived.by(() =>
-		gameState?.players.find((player) => player.id === user.id)
-	);
 </script>
 
 <div class="mx-auto max-w-2xl p-4">
@@ -33,45 +27,22 @@
 		{/if}
 
 		{#if gameState.phase === 'lobby'}
-			<LobbyPhase
-				code={params.code}
-				players={gameState.players}
-				isHost={currentPlayer?.isHost ?? false}
-				enabledCategories={gameState.enabledCategories}
-			/>
+			<LobbyPhase state={gameState} />
 		{:else if gameState.phase === 'loading-question'}
 			<div class="flex min-h-[50vh] items-center justify-center">
 				<p class="animate-pulse text-lg text-neon-yellow">Frage wird geladen...</p>
 			</div>
-		{:else if gameState.phase === 'writing' && currentPlayer}
-			<WritingPhase
-				code={params.code}
-				currentWord={gameState.currentWord}
-				{currentPlayer}
-				players={gameState.players}
-				myQuestionVote={gameState.myQuestionVote}
-			/>
-		{:else if gameState.phase === 'voting' && currentPlayer}
-			<VotingPhase
-				code={params.code}
-				currentWord={gameState.currentWord}
-				{currentPlayer}
-				possibleAnswers={gameState.possibleAnswers}
-			/>
+		{:else if gameState.phase === 'writing'}
+			<WritingPhase state={gameState} />
+		{:else if gameState.phase === 'voting'}
+			<VotingPhase state={gameState} />
 		{:else if gameState.phase === 'scoring'}
-			<ScoringPhase
-				code={params.code}
-				currentWord={gameState.currentWord}
-				players={gameState.players}
-				isHost={currentPlayer?.isHost ?? false}
-				roundResults={gameState.roundResults}
-				myQuestionVote={gameState.myQuestionVote}
-			/>
+			<ScoringPhase state={gameState} />
 		{:else if gameState.phase === 'error'}
 			<div class="flex min-h-[50vh] flex-col items-center justify-center gap-4">
 				<p class="text-lg text-neon-pink">Fehler: {gameState.reason}</p>
-				{#if currentPlayer?.isHost}
-					<Button onclick={() => backToLobby(params.code)}>Zurück zur Lobby</Button>
+				{#if gameState.you.isHost}
+					<Button onclick={() => backToLobby({ code: params.code })}>Zurück zur Lobby</Button>
 				{/if}
 			</div>
 		{:else if gameState.phase === 'ended'}

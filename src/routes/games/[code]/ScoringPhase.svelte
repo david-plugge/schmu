@@ -1,32 +1,22 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import { cn } from '$lib/utils';
-	import type { ViewerPlayer, ViewerRoundResults, Vote } from '$lib/phase-machine';
+	import type { ViewerGameState } from '$lib/phase-machine';
 	import { startNextRound, toggleQuestionVote } from './game.remote';
 	import { ThumbsUp, ThumbsDown } from '@lucide/svelte';
 
 	type Props = {
-		code: string;
-		currentWord: string;
-		players: ViewerPlayer[];
-		isHost: boolean;
-		roundResults: ViewerRoundResults;
-		myQuestionVote: Vote | undefined;
+		state: Extract<ViewerGameState, { phase: 'scoring' }>;
 	};
-	let {
-		code,
-		currentWord,
-		players,
-		isHost,
-		roundResults: results,
-		myQuestionVote
-	}: Props = $props();
+	let { state }: Props = $props();
+
+	const results = $derived(state.roundResults);
 </script>
 
 <div class="flex flex-col gap-6">
 	<div class="rounded-xl border border-neon-purple/30 bg-card/80 p-6 text-center backdrop-blur-sm">
 		<p class="mb-2 text-sm text-muted-foreground">Was bedeutet...</p>
-		<p class="text-3xl font-black text-neon-yellow">{currentWord}</p>
+		<p class="text-3xl font-black text-neon-yellow">{state.currentWord}</p>
 	</div>
 
 	<!-- All answers with attribution -->
@@ -36,7 +26,7 @@
 			{@const isMyGuess = answer.id === results.myGuessId}
 			{@const voters = Object.entries(results.playerGuesses)
 				.filter(([, aid]) => aid === answer.id)
-				.map(([pid]) => players.find((p) => p.id === pid)?.name)
+				.map(([pid]) => state.players.find((p) => p.id === pid)?.name)
 				.filter(Boolean)}
 			<div
 				class={cn(
@@ -92,10 +82,10 @@
 	<div class="flex items-center justify-center gap-4">
 		<span class="text-sm text-muted-foreground">Frage bewerten:</span>
 		<button
-			onclick={() => toggleQuestionVote({ code, vote: 'up' })}
+			onclick={() => toggleQuestionVote({ code: state.code, vote: 'up' })}
 			class={cn(
 				'rounded-lg p-2 transition-colors',
-				myQuestionVote === 'up'
+				state.myQuestionVote === 'up'
 					? 'bg-neon-green/20 text-neon-green'
 					: 'text-muted-foreground hover:bg-neon-green/10 hover:text-neon-green'
 			)}
@@ -103,10 +93,10 @@
 			<ThumbsUp size={20} />
 		</button>
 		<button
-			onclick={() => toggleQuestionVote({ code, vote: 'down' })}
+			onclick={() => toggleQuestionVote({ code: state.code, vote: 'down' })}
 			class={cn(
 				'rounded-lg p-2 transition-colors',
-				myQuestionVote === 'down'
+				state.myQuestionVote === 'down'
 					? 'bg-neon-pink/20 text-neon-pink'
 					: 'text-muted-foreground hover:bg-neon-pink/10 hover:text-neon-pink'
 			)}
@@ -119,7 +109,7 @@
 	<div class="rounded-xl border border-neon-purple/30 bg-card/80 p-4">
 		<h3 class="mb-3 text-center text-sm font-bold text-neon-purple">Punkte</h3>
 		<div class="flex flex-col gap-1">
-			{#each players.toSorted((a, b) => b.score - a.score) as player (player.id)}
+			{#each state.players.toSorted((a, b) => b.score - a.score) as player (player.id)}
 				{@const pointsChange = results.pointsChanges[player.id] ?? 0}
 				<div class="flex items-center justify-between rounded-lg px-3 py-2">
 					<span class="font-medium">{player.name}</span>
@@ -138,9 +128,9 @@
 		</div>
 	</div>
 
-	{#if isHost}
+	{#if state.you.isHost}
 		<Button
-			onclick={() => startNextRound({ code })}
+			onclick={() => startNextRound({ code: state.code })}
 			class="bg-neon-pink text-lg font-bold text-white shadow-md shadow-neon-pink/25 hover:bg-neon-pink/85"
 		>
 			Nächste Runde!

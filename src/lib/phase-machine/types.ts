@@ -37,7 +37,7 @@ export interface InternalRound {
 	questionVotes: Record<string, Vote>;
 }
 
-export interface InternalPlayer {
+export interface Player {
 	id: string;
 	name: string;
 	isHost: boolean;
@@ -49,7 +49,7 @@ export interface InternalPlayer {
 
 interface BaseState {
 	code: string;
-	players: InternalPlayer[];
+	players: Player[];
 	enabledCategories: CategorySlug[];
 	roundIndex: number;
 }
@@ -105,16 +105,6 @@ export type Effect =
 
 // ─── Viewer state ────────────────────────────────────────────────────────────
 
-export interface ViewerPlayer {
-	id: string;
-	name: string;
-	isHost: boolean;
-	score: number;
-	hasSubmitted: boolean;
-	hasVoted: boolean;
-	hasSkipped: boolean;
-}
-
 export interface ViewerAnswer {
 	id: string;
 	text: string;
@@ -135,7 +125,8 @@ export interface ViewerRoundResults {
 
 interface BaseViewerState {
 	code: string;
-	players: ViewerPlayer[];
+	players: Player[];
+	you: Player;
 	currentRoundNumber: number;
 }
 

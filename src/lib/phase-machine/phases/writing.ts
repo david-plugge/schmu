@@ -87,7 +87,8 @@ function project(state: StateOf<'writing'>, viewerId: string): ViewerGameState {
 	return {
 		phase: 'writing',
 		code: state.code,
-		players: state.players.map((p) => ({ ...p })),
+		players: state.players,
+		you: state.players.find((p) => p.id === viewerId)!,
 		currentRoundNumber: state.roundIndex + 1,
 		currentWord: state.currentRound.word,
 		myQuestionVote: state.currentRound.questionVotes[viewerId]

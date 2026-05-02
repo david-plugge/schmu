@@ -1,9 +1,9 @@
 import type { CategorySlug } from '$lib/categories';
-import type { InternalPlayer, InternalState } from './types';
+import type { Player, InternalState } from './types';
 
 export interface BaseFields {
 	code: string;
-	players: InternalPlayer[];
+	players: Player[];
 	enabledCategories: CategorySlug[];
 	roundIndex: number;
 }
@@ -47,7 +47,7 @@ export function shuffleSeeded<T>(arr: readonly T[], seed: string): T[] {
 	return result;
 }
 
-export function findPlayer(state: InternalState, id: string): InternalPlayer | undefined {
+export function findPlayer(state: InternalState, id: string): Player | undefined {
 	return state.players.find((p) => p.id === id);
 }
 
@@ -55,15 +55,11 @@ export function isHost(state: InternalState, id: string): boolean {
 	return findPlayer(state, id)?.isHost === true;
 }
 
-export function updatePlayer(
-	players: InternalPlayer[],
-	id: string,
-	patch: Partial<InternalPlayer>
-): InternalPlayer[] {
+export function updatePlayer(players: Player[], id: string, patch: Partial<Player>): Player[] {
 	return players.map((p) => (p.id === id ? { ...p, ...patch } : p));
 }
 
-export function resetRoundFlags(players: InternalPlayer[]): InternalPlayer[] {
+export function resetRoundFlags(players: Player[]): Player[] {
 	return players.map((p) => ({
 		...p,
 		hasSubmitted: false,
@@ -72,10 +68,7 @@ export function resetRoundFlags(players: InternalPlayer[]): InternalPlayer[] {
 	}));
 }
 
-export function applyRewards(
-	players: InternalPlayer[],
-	rewardedPoints: Record<string, number>
-): InternalPlayer[] {
+export function applyRewards(players: Player[], rewardedPoints: Record<string, number>): Player[] {
 	return players.map((p) =>
 		rewardedPoints[p.id] != null ? { ...p, score: p.score + rewardedPoints[p.id] } : p
 	);

@@ -7,11 +7,12 @@ function reduce(state: StateOf<'ended'>): TransitionResult {
 	return { state, effects: [] };
 }
 
-function project(state: StateOf<'ended'>): ViewerGameState {
+function project(state: StateOf<'ended'>, viewerId: string): ViewerGameState {
 	return {
 		phase: 'ended',
 		code: state.code,
-		players: state.players.map((p) => ({ ...p })),
+		players: state.players,
+		you: state.players.find((p) => p.id === viewerId)!,
 		currentRoundNumber: state.roundIndex + 1
 	};
 }
