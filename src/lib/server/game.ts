@@ -225,6 +225,7 @@ export class GameInstance {
 												isOwn: a.owner.playerId === viewerPlayerId
 											}
 							})),
+							myGuessId: this.currentRound.playerVotes[viewerPlayerId],
 							myQuestionVote: this.currentRound.questionVotes[viewerPlayerId]
 						}
 					: undefined

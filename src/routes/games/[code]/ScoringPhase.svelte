@@ -25,23 +25,28 @@
 	<div class="flex flex-col gap-3">
 		{#each results.answers as answer (answer.id)}
 			{@const isCorrect = answer.id === results.correctAnswerId}
-			{@const voterCount = Object.values(results.playerGuesses).filter(
-				(v) => v === answer.id
-			).length}
+			{@const isMyGuess = answer.id === results.myGuessId}
+			{@const voters = Object.entries(results.playerGuesses)
+				.filter(([, aid]) => aid === answer.id)
+				.map(([pid]) => players.find((p) => p.id === pid)?.name)
+				.filter(Boolean)}
 			<div
 				class={cn(
 					'rounded-xl border-2 p-4',
-					isCorrect ? 'border-neon-green/50 bg-neon-green/10' : 'border-border/50 bg-card/60'
+					isCorrect
+						? 'border-neon-green/50 bg-neon-green/10'
+						: isMyGuess
+							? 'border-neon-pink/50 bg-neon-pink/10'
+							: 'border-border/50 bg-card/60'
 				)}
 			>
 				<div class="flex items-start justify-between gap-2">
 					<p class="text-lg">{answer.text}</p>
-					{#if voterCount > 0}
+					{#if isMyGuess}
 						<span
-							class="shrink-0 rounded-full bg-neon-pink/20 px-2 py-0.5 text-xs font-bold text-neon-pink"
+							class="shrink-0 rounded-full bg-neon-cyan/20 px-2 py-0.5 text-xs font-bold text-neon-cyan"
 						>
-							{voterCount}
-							{voterCount === 1 ? 'Stimme' : 'Stimmen'}
+							Deine Wahl
 						</span>
 					{/if}
 				</div>
@@ -52,6 +57,27 @@
 						{answer.owner.name}
 					{/if}
 				</p>
+				{#if voters.length > 0}
+					<div class="mt-2 flex flex-wrap gap-2">
+						{#each voters as name, i (i)}
+							<span
+								class={cn(
+									'rounded-full px-2 py-0.5 text-xs font-bold',
+									isCorrect
+										? 'bg-neon-green/20 text-neon-green'
+										: 'bg-neon-pink/20 text-neon-pink'
+								)}
+							>
+								{name}
+								{#if isCorrect}
+									+2
+								{:else}
+									→ +3
+								{/if}
+							</span>
+						{/each}
+					</div>
+				{/if}
 			</div>
 		{/each}
 	</div>

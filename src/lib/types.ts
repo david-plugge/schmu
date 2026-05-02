@@ -46,6 +46,7 @@ export interface GameState {
 						isOwn: boolean;
 				  };
 		}>;
+		myGuessId?: string;
 		myQuestionVote?: 'up' | 'down';
 	};
 }

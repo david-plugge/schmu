@@ -27,8 +27,8 @@
 		loading = true;
 		try {
 			const [first, c] = await Promise.all([
-				getWords({ cursor: null, search: s }),
-				getWordsCount({ search: s })
+				getWords({ cursor: null, search: s }).run(),
+				getWordsCount({ search: s }).run()
 			]);
 			if (id !== requestId) return;
 			pages = [first];
@@ -54,7 +54,7 @@
 		const id = ++requestId;
 		loading = true;
 		try {
-			const next = await getWords({ cursor: nextCursor, search: activeSearch });
+			const next = await getWords({ cursor: nextCursor, search: activeSearch }).run();
 			if (id !== requestId) return;
 			pages = [...pages, next];
 		} finally {
