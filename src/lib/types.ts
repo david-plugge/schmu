@@ -27,6 +27,7 @@ export interface GameState {
 	possibleAnswers?: Array<{
 		id: string;
 		text: string;
+		isOwn: boolean;
 	}>;
 	roundResults?: {
 		correctAnswerId: string;
@@ -41,7 +42,8 @@ export interface GameState {
 				  }
 				| {
 						type: 'player';
-						playerId: string;
+						name: string;
+						isOwn: boolean;
 				  };
 		}>;
 	};

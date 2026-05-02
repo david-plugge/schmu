@@ -14,10 +14,11 @@ const assertGame = (code: string) => {
 };
 
 export const getGame = query.live(z.string(), async function* (code) {
+	const session = assertSession();
 	const game = assertGame(code);
 	let state!: GameState;
 	let resolve: (() => void) | undefined;
-	const unsub = game.subscribe((_state) => {
+	const unsub = game.subscribe(session.id, (_state) => {
 		state = _state;
 		resolve?.();
 	});

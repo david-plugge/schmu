@@ -50,8 +50,7 @@
 					{#if answer.owner.type === 'system'}
 						Richtige Antwort
 					{:else}
-						{@const owner = answer.owner as { type: 'player'; playerId: string }}
-						{players.find((p) => p.id === owner.playerId)?.name ?? 'Unbekannt'}
+						{answer.owner.name}
 					{/if}
 				</p>
 			</div>

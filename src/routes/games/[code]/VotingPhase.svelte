@@ -7,7 +7,7 @@
 		code: string;
 		currentWord: string;
 		currentPlayer: Player;
-		possibleAnswers: Array<{ id: string; text: string }>;
+		possibleAnswers: Array<{ id: string; text: string; isOwn: boolean }>;
 	};
 	let { code, currentWord, currentPlayer, possibleAnswers }: Props = $props();
 
@@ -35,12 +35,13 @@
 				type="button"
 				class={cn(
 					'rounded-xl border-2 p-5 text-left text-lg transition-all',
+					answer.isOwn && 'cursor-not-allowed opacity-50',
 					myVoteId === answer.id
 						? 'border-neon-green bg-neon-green/10 shadow-md shadow-neon-green/20'
 						: `border-${color}/30 bg-card/60 hover:border-${color}/60 hover:bg-card/80`,
 					currentPlayer.hasVoted && myVoteId !== answer.id && 'opacity-50'
 				)}
-				disabled={currentPlayer.hasVoted}
+				disabled={currentPlayer.hasVoted || answer.isOwn}
 				onclick={() => vote(answer.id)}
 			>
 				<span class="mr-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-{color}/20 text-sm font-bold text-{color}">

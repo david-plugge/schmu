@@ -7,7 +7,7 @@ const CORRECT_ANSWER_REWARD = 2;
 const FOOLED_ANSWER_REWARD = 3;
 
 export class GameInstance {
-	private readonly listeners = new Set<GameStateListener>();
+	private readonly listeners = new Set<() => void>();
 
 	public readonly code: string;
 	private phase: GamePhase;
@@ -97,6 +97,7 @@ export class GameInstance {
 		if (!player) return;
 		const answer = this.currentRound.answers.find((a) => a.id === answerId);
 		if (!answer) return;
+		if (answer.owner.type === 'player' && answer.owner.playerId === playerId) return;
 
 		this.currentRound.playerVotes[playerId] = answer.id;
 		player.hasVoted = true;
@@ -117,23 +118,23 @@ export class GameInstance {
 		}
 	}
 
-	public subscribe(sub: GameStateListener) {
-		this.listeners.add(sub);
-		sub(this.getGameState());
+	public subscribe(viewerPlayerId: string, sub: GameStateListener) {
+		const listener = () => sub(this.getGameState(viewerPlayerId));
+		this.listeners.add(listener);
+		listener();
 
 		return () => {
-			this.listeners.delete(sub);
+			this.listeners.delete(listener);
 		};
 	}
 
 	private notify() {
-		const state = this.getGameState();
-		for (const sub of this.listeners) {
-			sub(state);
+		for (const listener of this.listeners) {
+			listener();
 		}
 	}
 
-	private getGameState(): GameState {
+	private getGameState(viewerPlayerId: string): GameState {
 		return {
 			code: this.code,
 			phase: this.phase,
@@ -143,7 +144,10 @@ export class GameInstance {
 				(this.phase === 'reading' || this.phase === 'voting') && this.currentRound
 					? this.currentRound.answers.map((a) => ({
 							id: a.id,
-							text: a.text
+							text: a.text,
+							isOwn:
+								a.owner.type === 'player' &&
+								a.owner.playerId === viewerPlayerId
 						}))
 					: undefined,
 			currentWord: this.currentRound?.word,
@@ -153,7 +157,20 @@ export class GameInstance {
 							correctAnswerId: this.currentRound.correctAnswerId,
 							playerGuesses: this.currentRound.playerVotes,
 							pointsChanges: this.currentRound.rewardedPoints,
-							answers: this.currentRound.answers
+							answers: this.currentRound.answers.map((a) => ({
+								id: a.id,
+								text: a.text,
+								owner:
+									a.owner.type === 'system'
+										? { type: 'system' as const }
+										: {
+												type: 'player' as const,
+												name:
+													this.players.get(a.owner.playerId)?.name ??
+													'Unbekannt',
+												isOwn: a.owner.playerId === viewerPlayerId
+											}
+							}))
 						}
 					: undefined
 		};
