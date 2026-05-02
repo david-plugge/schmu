@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { getLoggedInUser } from '../../setup.remote';
-	import { Button } from '$lib/components/ui/button';
-	import { getGame, startGame, startNextRound, submitAnswer, submitVote } from './game.remote';
-	import PlayerList from './PlayerList.svelte';
-	import { Input } from '$lib/components/ui/input';
-	import { cn } from '$lib/utils';
-	import { page } from '$app/state';
+	import { getGame, submitAnswer } from './game.remote';
+	import LobbyPhase from './LobbyPhase.svelte';
+	import WritingPhase from './WritingPhase.svelte';
+	import VotingPhase from './VotingPhase.svelte';
+	import ScoringPhase from './ScoringPhase.svelte';
 
 	let { params } = $props();
 
@@ -17,90 +16,58 @@
 		gameState?.players.find((player) => player.id === user.id)
 	);
 
-	let myVoteId = $state<string>();
-	function vote(answerId: string) {
-		if (currentPlayer?.hasVoted) return;
-
-		myVoteId = answerId;
-		submitVote({
-			answerId,
-			code: params.code
-		});
-	}
+	$effect(() => {
+		if (gameState?.currentRound) {
+			submitAnswer.fields.answer.set('');
+		}
+	});
 </script>
 
-<div class="p-2">
+<div class="mx-auto max-w-2xl p-4">
 	{#if !gameState}
-		<p>Beitritt läuft...</p>
+		<div class="flex min-h-[50vh] items-center justify-center">
+			<p class="animate-pulse text-lg text-neon-cyan">Beitritt läuft...</p>
+		</div>
 	{:else}
-		{#if gameState.phase === 'lobby'}
-			<div class="flex flex-col gap-4">
-				<PlayerList players={gameState.players} />
-
-				<div class="grid gap-2 md:grid-cols-2">
-					<Button
-						variant="outline"
-						onclick={() => navigator.clipboard.writeText(`${page.url.origin}/games/${params.code}`)}
-						class="truncate"
-					>
-						{`${page.url.origin}/games/${params.code}`}
-					</Button>
-					<Button variant="outline" onclick={() => navigator.clipboard.writeText(params.code)}>
-						{params.code}
-					</Button>
-				</div>
-
-				{#if currentPlayer?.isHost}
-					<Button onclick={() => startGame(gameState!.code)}>Start</Button>
-				{/if}
+		{#if gameState.phase !== 'lobby'}
+			<div class="mb-6 text-center">
+				<span class="rounded-full bg-neon-purple/20 px-4 py-1 text-sm font-bold text-neon-purple">
+					Runde {gameState.currentRound}
+				</span>
 			</div>
-		{:else if gameState.phase === 'loading-question'}
-			<p>Spiel wird vorbereitet...</p>
-		{:else if gameState.phase === 'writing'}
-			{#if currentPlayer?.hasSubmitted}
-				<p>
-					Warte auf die anderen ({gameState.players.filter((p) => p.hasSubmitted).length}/{gameState
-						.players.length})
-				</p>
-			{:else}
-				<div class="mb-4">
-					Was ist eigentlich der/die/das <span class="font-medium">{gameState.currentWord}</span>?
-				</div>
-
-				<form {...submitAnswer}>
-					<input {...submitAnswer.fields.code.as('hidden', params.code)} />
-					<Input {...submitAnswer.fields.answer.as('text')} />
-				</form>
-			{/if}
-		{:else if gameState.phase === 'voting'}
-			<div class="p-6 text-xl font-semibold">{gameState.currentWord}</div>
-
-			<div class="flex flex-col gap-6 p-6">
-				{#each gameState.possibleAnswers as answer (answer.id)}
-					<button
-						type="submit"
-						class={cn(
-							'rounded-lg border p-6 text-lg',
-							myVoteId === answer.id && 'border-green-600'
-						)}
-						disabled={currentPlayer?.hasVoted}
-						onclick={() => {
-							if (currentPlayer?.hasVoted) return;
-							vote(answer.id);
-						}}
-					>
-						{answer.text}
-					</button>
-				{/each}
-			</div>
-		{:else if gameState.phase === 'scoring'}
-			<pre>{JSON.stringify(gameState.roundResults, null, 2)}</pre>
-
-			{#if currentPlayer?.isHost}
-				<Button onclick={() => startNextRound({ code: params.code })}>Nächste runde!</Button>
-			{/if}
 		{/if}
 
-		<!-- <pre>{JSON.stringify(gameState, null, 2)}</pre> -->
+		{#if gameState.phase === 'lobby'}
+			<LobbyPhase
+				code={params.code}
+				players={gameState.players}
+				isHost={currentPlayer?.isHost ?? false}
+			/>
+		{:else if gameState.phase === 'loading-question'}
+			<div class="flex min-h-[50vh] items-center justify-center">
+				<p class="animate-pulse text-lg text-neon-yellow">Frage wird geladen...</p>
+			</div>
+		{:else if gameState.phase === 'writing' && currentPlayer}
+			<WritingPhase
+				code={params.code}
+				currentWord={gameState.currentWord!}
+				{currentPlayer}
+				players={gameState.players}
+			/>
+		{:else if gameState.phase === 'voting' && currentPlayer && gameState.possibleAnswers}
+			<VotingPhase
+				code={params.code}
+				currentWord={gameState.currentWord!}
+				{currentPlayer}
+				possibleAnswers={gameState.possibleAnswers}
+			/>
+		{:else if gameState.phase === 'scoring' && gameState.roundResults}
+			<ScoringPhase
+				code={params.code}
+				players={gameState.players}
+				isHost={currentPlayer?.isHost ?? false}
+				roundResults={gameState.roundResults}
+			/>
+		{/if}
 	{/if}
 </div>

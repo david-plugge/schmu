@@ -3,8 +3,8 @@ import { generateQuestionBatch } from './ai';
 
 type GameStateListener = (state: GameState) => void;
 
-const CORRECT_ANSWER_REDARD = 2;
-const FOOLED_ANSWER_REDARD = 3;
+const CORRECT_ANSWER_REWARD = 2;
+const FOOLED_ANSWER_REWARD = 3;
 
 export class GameInstance {
 	private readonly listeners = new Set<GameStateListener>();
@@ -174,10 +174,10 @@ export class GameInstance {
 			if (answer) {
 				if (answer.owner.type === 'system') {
 					round.rewardedPoints[playerId] ??= 0;
-					round.rewardedPoints[playerId] += CORRECT_ANSWER_REDARD;
+					round.rewardedPoints[playerId] += CORRECT_ANSWER_REWARD;
 				} else {
 					round.rewardedPoints[answer.owner.playerId] ??= 0;
-					round.rewardedPoints[answer.owner.playerId] += FOOLED_ANSWER_REDARD;
+					round.rewardedPoints[answer.owner.playerId] += FOOLED_ANSWER_REWARD;
 				}
 			}
 		}
