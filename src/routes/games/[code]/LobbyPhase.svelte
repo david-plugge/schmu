@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import type { Player } from '$lib/types';
+	import type { CategorySlug } from '$lib/categories';
 	import PlayerList from './PlayerList.svelte';
+	import CategoryPicker from './CategoryPicker.svelte';
 	import { startGame } from './game.remote';
 	import { page } from '$app/state';
 
@@ -9,8 +11,9 @@
 		code: string;
 		players: Player[];
 		isHost: boolean;
+		enabledCategories: CategorySlug[];
 	};
-	let { code, players, isHost }: Props = $props();
+	let { code, players, isHost, enabledCategories }: Props = $props();
 </script>
 
 <div class="flex flex-col gap-6">
@@ -25,6 +28,8 @@
 	</div>
 
 	<PlayerList {players} />
+
+	<CategoryPicker {code} enabled={enabledCategories} {isHost} />
 
 	<div class="grid gap-2 md:grid-cols-2">
 		<Button

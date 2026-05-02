@@ -54,6 +54,7 @@
 	"packageManager": "pnpm@11.0.3+sha512.10448f2988933787c6699aef683174c741f6472ad91b7e3c8fe3e2bda57be8a0f7caf58949b8bc22e624578b3dc6e57876ba4c631928a1b84cc141e12c79bccd",
 	"dependencies": {
 		"better-sqlite3": "^12.9.0",
+		"dedent": "^1.7.2",
 		"drizzle-orm": "^0.45.2"
 	}
 }

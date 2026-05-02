@@ -36,6 +36,7 @@
 				code={params.code}
 				players={gameState.players}
 				isHost={currentPlayer?.isHost ?? false}
+				enabledCategories={gameState.enabledCategories}
 			/>
 		{:else if gameState.phase === 'loading-question'}
 			<div class="flex min-h-[50vh] items-center justify-center">

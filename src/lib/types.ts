@@ -1,3 +1,5 @@
+import type { CategorySlug } from './categories';
+
 export type GamePhase =
 	| 'error'
 	| 'lobby'
@@ -24,6 +26,7 @@ export interface GameState {
 	players: Player[];
 	phase: GamePhase;
 	currentRound: number;
+	enabledCategories: CategorySlug[];
 	currentWord?: string;
 	hasDownvotedQuestion?: boolean;
 	possibleAnswers?: Array<{

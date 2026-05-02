@@ -45,7 +45,9 @@ async function seed() {
 
 			for (const q of batch) {
 				try {
-					db.insert(questions).values({ word: q.word, definition: q.definition }).run();
+					db.insert(questions)
+						.values({ word: q.word, definition: q.definition, category: q.category })
+						.run();
 					existingWords.push(q.word);
 					inserted++;
 				} catch {

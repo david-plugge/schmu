@@ -2,6 +2,7 @@ import { command, form, query } from '$app/server';
 import { gameManager } from '$lib/server/game-manager';
 import { assertSession } from '$lib/server/session';
 import type { GameState } from '$lib/types';
+import { CATEGORY_SLUGS } from '$lib/categories';
 import { error } from '@sveltejs/kit';
 import z from 'zod';
 
@@ -38,6 +39,18 @@ export const startGame = command(z.string(), (code) => {
 	const game = assertGame(code);
 	game.startGame(session.id);
 });
+
+export const setCategories = command(
+	z.object({
+		code: z.string(),
+		categories: z.array(z.enum(CATEGORY_SLUGS)).min(1)
+	}),
+	({ code, categories }) => {
+		const session = assertSession();
+		const game = assertGame(code);
+		game.setEnabledCategories(session.id, categories);
+	}
+);
 
 export const submitAnswer = form(
 	z.object({

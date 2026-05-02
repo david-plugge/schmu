@@ -1,4 +1,5 @@
 import type { GamePhase, GameState, Player, Question, Round } from '$lib/types';
+import { CATEGORY_SLUGS, type CategorySlug } from '$lib/categories';
 import { getRandomQuestions, voteQuestion } from './db/questions';
 
 type GameStateListener = (state: GameState) => void;
@@ -45,10 +46,23 @@ export class GameInstance {
 	private readonly questionQueue: Question[] = [];
 	private currentRound: Round | null = null;
 	private readonly rounds: Round[] = [];
+	private enabledCategories: CategorySlug[] = [...CATEGORY_SLUGS];
 
 	constructor(code: string) {
 		this.code = code;
 		this.phase = 'lobby';
+	}
+
+	public setEnabledCategories(playerId: string, categories: CategorySlug[]) {
+		if (this.phase !== 'lobby') return;
+		const player = this.players.get(playerId);
+		if (player?.isHost !== true) return;
+		if (categories.length === 0) return;
+
+		const unique = [...new Set(categories)].filter((c) => CATEGORY_SLUGS.includes(c));
+		if (unique.length === 0) return;
+		this.enabledCategories = unique;
+		this.notify();
 	}
 
 	private transitionTo(phase: GamePhase) {
@@ -231,6 +245,7 @@ export class GameInstance {
 			phase: this.phase,
 			players: this.players.values().toArray(),
 			currentRound: this.rounds.length + 1,
+			enabledCategories: [...this.enabledCategories],
 			hasDownvotedQuestion:
 				this.phase === 'writing' && this.currentRound
 					? this.currentRound.questionVotes[viewerPlayerId] === 'down'
@@ -337,7 +352,7 @@ export class GameInstance {
 	}
 
 	private loadQuestions() {
-		const newQuestions = getRandomQuestions(5, this.getUsedWords());
+		const newQuestions = getRandomQuestions(5, this.getUsedWords(), this.enabledCategories);
 		this.questionQueue.push(...newQuestions);
 	}
 
