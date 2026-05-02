@@ -64,17 +64,15 @@ describe('writing phase', () => {
 			expect(result.state.phase).toBe('writing');
 		});
 
-		it('transitions to loading-question when all skipped, with word added to usedWords', () => {
+		it('transitions to loading-question when all skipped', () => {
 			const state = makeWriting({
 				players: [
 					makePlayer({ id: 'p1', hasSkipped: true }),
 					makePlayer({ id: 'p2', hasSkipped: false })
-				],
-				usedWords: ['Vorwort']
+				]
 			});
 			const result = writingPhase.reduce(state, { type: 'toggle-skip', playerId: 'p2' });
 			expect(result.state.phase).toBe('loading-question');
-			expect(result.state.usedWords).toEqual(['Vorwort', 'Schmu']);
 			expectEffect(result.effects, 'load-next-question', {});
 		});
 	});

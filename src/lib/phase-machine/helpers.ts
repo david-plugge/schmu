@@ -6,7 +6,6 @@ export interface BaseFields {
 	players: InternalPlayer[];
 	enabledCategories: CategorySlug[];
 	roundIndex: number;
-	usedWords: string[];
 }
 
 export function extractBase(state: InternalState): BaseFields {
@@ -14,8 +13,7 @@ export function extractBase(state: InternalState): BaseFields {
 		code: state.code,
 		players: state.players,
 		enabledCategories: state.enabledCategories,
-		roundIndex: state.roundIndex,
-		usedWords: state.usedWords
+		roundIndex: state.roundIndex
 	};
 }
 

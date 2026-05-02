@@ -22,12 +22,10 @@ function reduce(state: StateOf<'scoring'>, action: Action): TransitionResult {
 			return handleToggleQuestionVote(state, action);
 		case 'next-round': {
 			if (!isHost(state, action.playerId)) return { state, effects: [] };
-			const newUsedWords = [...state.usedWords, state.currentRound.word];
 			return {
 				state: {
 					...extractBase(state),
 					roundIndex: state.roundIndex + 1,
-					usedWords: newUsedWords,
 					phase: 'loading-question',
 					loadId: action.loadId
 				},
@@ -35,7 +33,6 @@ function reduce(state: StateOf<'scoring'>, action: Action): TransitionResult {
 					{
 						type: 'load-next-question',
 						loadId: action.loadId,
-						usedWords: newUsedWords,
 						categories: state.enabledCategories
 					}
 				]

@@ -1,17 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Question } from '$lib/phase-machine';
 import { GameDispatcher, type DispatcherDeps } from '../game-dispatcher';
+import type { QuestionCatalogue } from '../question-catalogue';
 
-function flush() {
-	return new Promise((r) => setTimeout(r, 0));
+function makeCatalogue(overrides: Partial<QuestionCatalogue> = {}): QuestionCatalogue {
+	return {
+		pickNext: vi.fn(),
+		recordPlay: vi.fn(),
+		recordVote: vi.fn(),
+		...overrides
+	};
 }
 
 function makeDeps(overrides: Partial<DispatcherDeps> = {}): DispatcherDeps {
 	let counter = 0;
 	return {
-		loadQuestion: vi.fn(),
-		voteQuestion: vi.fn(),
-		incrementTimesPlayed: vi.fn(),
+		catalogue: makeCatalogue(),
 		mintId: () => `id-${++counter}`,
 		...overrides
 	};
@@ -50,68 +54,56 @@ describe('GameDispatcher', () => {
 		expect(cb).not.toHaveBeenCalled();
 	});
 
-	it('async load resolves into writing', async () => {
-		const deps = makeDeps({
-			loadQuestion: vi.fn().mockResolvedValue(Q)
-		});
-		const d = new GameDispatcher('ABCD', deps);
+	it('catalogue.pickNext returning a question lands in writing', () => {
+		const catalogue = makeCatalogue({ pickNext: vi.fn().mockReturnValue(Q) });
+		const d = new GameDispatcher('ABCD', makeDeps({ catalogue }));
 		d.dispatch({ type: 'add-player', playerId: 'p1', name: 'Alice', isHost: true });
 		const cb = vi.fn();
 		d.subscribe('p1', cb);
 		cb.mockClear();
 		d.dispatch({ type: 'start-game', playerId: 'p1', loadId: 'load-1' });
-		// loading-question phase
-		expect(cb.mock.calls[0][0].phase).toBe('loading-question');
-		await flush();
-		// writing phase after load resolves
-		const lastCall = cb.mock.calls[cb.mock.calls.length - 1];
-		expect(lastCall[0].phase).toBe('writing');
-		expect(lastCall[0].currentWord).toBe('Schmu');
-		expect(deps.incrementTimesPlayed).toHaveBeenCalledWith(42);
+		const last = cb.mock.calls[cb.mock.calls.length - 1][0];
+		expect(last.phase).toBe('writing');
+		expect(last.currentWord).toBe('Schmu');
+		expect(catalogue.recordPlay).toHaveBeenCalledWith(42);
 	});
 
-	it('stale question-loaded is ignored when host returned to lobby', async () => {
-		let resolveLoad!: (q: Question | null) => void;
-		const deps = makeDeps({
-			loadQuestion: vi
-				.fn()
-				.mockImplementation(() => new Promise<Question | null>((r) => (resolveLoad = r)))
-		});
-		const d = new GameDispatcher('ABCD', deps);
+	it('catalogue.pickNext returning null surfaces error phase', () => {
+		const catalogue = makeCatalogue({ pickNext: vi.fn().mockReturnValue(null) });
+		const d = new GameDispatcher('ABCD', makeDeps({ catalogue }));
 		d.dispatch({ type: 'add-player', playerId: 'p1', name: 'Alice', isHost: true });
-		d.dispatch({ type: 'start-game', playerId: 'p1', loadId: 'load-1' });
-		// Simulate the load failing while user goes back-to-lobby in error phase
-		resolveLoad(null); // null question → question-load-failed
-		await flush();
-		expect(deps.incrementTimesPlayed).not.toHaveBeenCalled();
-		// Now in error phase
 		const cb = vi.fn();
 		d.subscribe('p1', cb);
-		expect(cb.mock.calls[0][0].phase).toBe('error');
+		cb.mockClear();
+		d.dispatch({ type: 'start-game', playerId: 'p1', loadId: 'load-1' });
+		const last = cb.mock.calls[cb.mock.calls.length - 1][0];
+		expect(last.phase).toBe('error');
+		expect(last.reason).toBe('no-questions');
+		expect(catalogue.recordPlay).not.toHaveBeenCalled();
 	});
 
-	it('vote-question effect calls the DB', async () => {
-		const deps = makeDeps({ loadQuestion: vi.fn().mockResolvedValue(Q) });
-		const d = new GameDispatcher('ABCD', deps);
+	it('vote-question effect calls catalogue.recordVote', () => {
+		const catalogue = makeCatalogue({ pickNext: vi.fn().mockReturnValue(Q) });
+		const d = new GameDispatcher('ABCD', makeDeps({ catalogue }));
 		d.dispatch({ type: 'add-player', playerId: 'p1', name: 'Alice', isHost: true });
 		d.dispatch({ type: 'start-game', playerId: 'p1', loadId: 'load-1' });
-		await flush();
 		// now in writing
 		d.dispatch({ type: 'toggle-question-vote', playerId: 'p1', vote: 'down' });
-		expect(deps.voteQuestion).toHaveBeenCalledWith(42, -1);
+		expect(catalogue.recordVote).toHaveBeenCalledWith(42, -1);
 	});
 
-	it('load failure surfaces error phase', async () => {
-		const deps = makeDeps({
-			loadQuestion: vi.fn().mockRejectedValue(new Error('db down'))
+	it('catalogue.pickNext throwing surfaces error phase', () => {
+		const catalogue = makeCatalogue({
+			pickNext: vi.fn().mockImplementation(() => {
+				throw new Error('db down');
+			})
 		});
-		const d = new GameDispatcher('ABCD', deps);
+		const d = new GameDispatcher('ABCD', makeDeps({ catalogue }));
 		d.dispatch({ type: 'add-player', playerId: 'p1', name: 'Alice', isHost: true });
 		const cb = vi.fn();
 		d.subscribe('p1', cb);
 		cb.mockClear();
 		d.dispatch({ type: 'start-game', playerId: 'p1', loadId: 'load-1' });
-		await flush();
 		const last = cb.mock.calls[cb.mock.calls.length - 1][0];
 		expect(last.phase).toBe('error');
 		expect(last.reason).toBe('db down');

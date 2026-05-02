@@ -7,7 +7,6 @@ export function initialState(code: string): InternalState {
 		code,
 		players: [],
 		enabledCategories: [...CATEGORY_SLUGS],
-		roundIndex: 0,
-		usedWords: []
+		roundIndex: 0
 	};
 }

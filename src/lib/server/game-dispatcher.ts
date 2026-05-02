@@ -1,4 +1,3 @@
-import type { CategorySlug } from '$lib/categories';
 import {
 	initialState,
 	project,
@@ -6,14 +5,12 @@ import {
 	type Action,
 	type Effect,
 	type InternalState,
-	type Question,
 	type ViewerGameState
 } from '$lib/phase-machine';
+import type { QuestionCatalogue } from './question-catalogue';
 
 export interface DispatcherDeps {
-	loadQuestion(usedWords: string[], categories: CategorySlug[]): Promise<Question | null>;
-	voteQuestion(questionId: number, delta: number): void;
-	incrementTimesPlayed(questionId: number): void;
+	catalogue: QuestionCatalogue;
 	mintId(): string;
 }
 
@@ -51,21 +48,21 @@ export class GameDispatcher {
 		for (const effect of effects) {
 			switch (effect.type) {
 				case 'vote-question':
-					this.deps.voteQuestion(effect.questionId, effect.delta);
+					this.deps.catalogue.recordVote(effect.questionId, effect.delta);
 					break;
 				case 'increment-times-played':
-					this.deps.incrementTimesPlayed(effect.questionId);
+					this.deps.catalogue.recordPlay(effect.questionId);
 					break;
 				case 'load-next-question':
-					void this.handleLoad(effect);
+					this.handleLoad(effect);
 					break;
 			}
 		}
 	}
 
-	private async handleLoad(effect: Extract<Effect, { type: 'load-next-question' }>): Promise<void> {
+	private handleLoad(effect: Extract<Effect, { type: 'load-next-question' }>): void {
 		try {
-			const question = await this.deps.loadQuestion(effect.usedWords, effect.categories);
+			const question = this.deps.catalogue.pickNext(effect.categories);
 			if (!question) {
 				this.dispatch({
 					type: 'question-load-failed',

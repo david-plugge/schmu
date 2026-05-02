@@ -61,8 +61,7 @@ describe('scoring phase', () => {
 			const state = makeScoring({
 				players: [makePlayer({ id: 'p1', isHost: true })],
 				currentRound: round,
-				roundIndex: 0,
-				usedWords: ['Vorwort']
+				roundIndex: 0
 			});
 			const result = scoringPhase.reduce(state, {
 				type: 'next-round',
@@ -71,7 +70,6 @@ describe('scoring phase', () => {
 			});
 			expect(result.state.phase).toBe('loading-question');
 			expect(result.state.roundIndex).toBe(1);
-			expect(result.state.usedWords).toEqual(['Vorwort', 'CurrentWord']);
 			expectEffect(result.effects, 'load-next-question', { loadId: 'load-2' });
 		});
 	});

@@ -1,22 +1,15 @@
-import { GameDispatcher, type DispatcherDeps } from './game-dispatcher';
-import { getRandomQuestions, incrementTimesPlayed, voteQuestion } from './db/questions';
-
-const realDeps: DispatcherDeps = {
-	loadQuestion(usedWords, categories) {
-		const [q] = getRandomQuestions(1, usedWords, categories);
-		return Promise.resolve(q ?? null);
-	},
-	voteQuestion,
-	incrementTimesPlayed,
-	mintId: () => crypto.randomUUID()
-};
+import { GameDispatcher } from './game-dispatcher';
+import { createDbCatalogue } from './question-catalogue';
 
 class GameManager {
 	private readonly games = new Map<string, GameDispatcher>();
 
 	createGame(playerId: string, playerName: string): string {
 		const code = createRandomCode();
-		const game = new GameDispatcher(code, realDeps);
+		const game = new GameDispatcher(code, {
+			catalogue: createDbCatalogue(),
+			mintId: () => crypto.randomUUID()
+		});
 		game.dispatch({ type: 'add-player', playerId, name: playerName, isHost: true });
 		this.games.set(code, game);
 		return code;

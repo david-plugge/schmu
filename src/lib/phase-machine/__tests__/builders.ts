@@ -49,7 +49,6 @@ interface BaseStateInput {
 	players?: InternalPlayer[];
 	enabledCategories?: CategorySlug[];
 	roundIndex?: number;
-	usedWords?: string[];
 }
 
 function withBase(input: BaseStateInput) {
@@ -57,8 +56,7 @@ function withBase(input: BaseStateInput) {
 		code: input.code ?? 'ABCD',
 		players: input.players ?? [],
 		enabledCategories: input.enabledCategories ?? [...CATEGORY_SLUGS],
-		roundIndex: input.roundIndex ?? 0,
-		usedWords: input.usedWords ?? []
+		roundIndex: input.roundIndex ?? 0
 	};
 }
 

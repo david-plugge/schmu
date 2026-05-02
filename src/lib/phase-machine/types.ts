@@ -52,7 +52,6 @@ interface BaseState {
 	players: InternalPlayer[];
 	enabledCategories: CategorySlug[];
 	roundIndex: number;
-	usedWords: string[];
 }
 
 export type InternalState = BaseState &
@@ -99,7 +98,6 @@ export type Effect =
 	| {
 			type: 'load-next-question';
 			loadId: string;
-			usedWords: string[];
 			categories: CategorySlug[];
 	  }
 	| { type: 'vote-question'; questionId: number; delta: number }

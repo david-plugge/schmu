@@ -54,12 +54,10 @@ function reduce(state: StateOf<'writing'>, action: Action): TransitionResult {
 			const allSkipped = newPlayers.every((p) => p.hasSkipped);
 			if (allSkipped) {
 				const skipLoadId = `skip:${state.currentRound.correctAnswerId}`;
-				const newUsedWords = [...state.usedWords, state.currentRound.word];
 				return {
 					state: {
 						...extractBase(state),
 						players: newPlayers,
-						usedWords: newUsedWords,
 						phase: 'loading-question',
 						loadId: skipLoadId
 					},
@@ -67,7 +65,6 @@ function reduce(state: StateOf<'writing'>, action: Action): TransitionResult {
 						{
 							type: 'load-next-question',
 							loadId: skipLoadId,
-							usedWords: newUsedWords,
 							categories: state.enabledCategories
 						}
 					]

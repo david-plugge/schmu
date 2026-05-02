@@ -61,7 +61,6 @@ function reduce(state: StateOf<'lobby'>, action: Action): TransitionResult {
 					{
 						type: 'load-next-question',
 						loadId: action.loadId,
-						usedWords: state.usedWords,
 						categories: state.enabledCategories
 					}
 				]
