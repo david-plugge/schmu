@@ -512,6 +512,193 @@ today.
 
 ---
 
+## 11. `loadId` is a hand-passed token across state/action/effect — the stale-load invariant wants its own seam
+
+**Status:** open
+
+**Files:**
+
+- `src/lib/phase-machine/types.ts:60` — `loadId: string` on `loading-question` state
+- `src/lib/phase-machine/types.ts:80, 81, 87, 91` — `loadId` on `start-game`, `next-round`,
+  `question-loaded`, `question-load-failed` actions
+- `src/lib/phase-machine/types.ts:100` — `loadId` on `load-next-question` Effect
+- `src/lib/phase-machine/phases/loading-question.ts:21, 51` — duplicated `if
+  (action.loadId !== state.loadId) return` guards
+- `src/lib/phase-machine/phases/writing.ts:55-67` — fabricates `'skip:${correctAnswerId}'`
+  because `toggle-skip` carries no `loadId`
+- `src/lib/server/game-dispatcher.ts:88-91` — dispatcher echoes `effect.loadId` back into
+  the resolution action
+- `src/routes/games/[code]/game.remote.ts:50, 110` — remote layer mints loadIds via
+  `mintId()` and threads them onto `start-game` / `next-round`
+
+**Problem:** A single invariant — "ignore late resolutions of a load that's been
+superseded" — is encoded as a token that travels through five surfaces (action → state
+→ effect → dispatcher → resolution-action). Three different code paths produce loadIds:
+the dispatcher mints two via `mintId()`; the writing reducer synthesizes a third
+deterministically. The `'skip:'` prefix in writing.ts is the smell — a pure reducer has
+no business minting identifiers, but the action it's processing didn't carry one. The
+stale-check is duplicated (loading-question.ts:21 and :51).
+
+**Solution sketch:** Replace the externally-minted token with a state-internal **load
+generation counter**. Every transition into `loading-question` increments it; the
+load-next-question effect carries the generation; resolution actions carry the
+generation they were spawned for; the reducer rejects mismatches. The dispatcher no
+longer mints loadIds. The writing-skip path stops fabricating IDs.
+
+### Decisions (locked in during grilling)
+
+1. **Counter location: `BaseState`, not `loading-question`-only.** A monotonic
+   `loadGeneration: number` always present; `lobby`/`writing`/`voting`/`scoring` simply
+   don't read it. Alternatives considered: a `pendingLoad: number | null` on base
+   (rejected — adds the same "non-null in this phase" invariant the loadId field already
+   has, just renamed); the field on `loading-question` only (rejected — the counter has
+   to come *from somewhere* on entry, which puts it back on the action).
+2. **Reducer increments, dispatcher does not.** Reducers stay pure; every `→
+   loading-question` transition does `loadGeneration: state.loadGeneration + 1` and
+   emits the load effect with that number. The dispatcher's `handleLoad` just runs
+   `pickNext` and dispatches `question-loaded` / `question-load-failed` with
+   `effect.generation`.
+3. **Skip-triggered loads stop being special.** `writing`'s all-skipped path bumps the
+   counter like any other entry. The `'skip:'` fabrication disappears.
+4. **`mintId` keeps one caller per layer.** Dispatcher's `DispatcherDeps.mintId` retains
+   `correctAnswerId` minting at resolution time. `gameCommand`'s `ctx.mintId` retains
+   `submit-answer.answerId` minting. Loses `loadId` minting on `start-game` and
+   `next-round`.
+5. **Strict equality on the staleness check.** `action.generation ===
+   state.loadGeneration`; same semantics as today. No "≥" / last-writer-wins logic
+   because in-flight loads are always cardinality 1.
+
+### Test surface after deepening
+
+Three asserts on `loadingQuestionPhase.reduce` capture the full staleness contract:
+
+- `(loading-question @ gen=5, question-loaded @ gen=5)` → transitions to writing
+- `(loading-question @ gen=5, question-loaded @ gen=4)` → unchanged
+- `(loading-question @ gen=5, question-load-failed @ gen=4)` → unchanged
+
+Dispatcher-side: mock `pickNext`, observe that the resolution action carries
+`effect.generation`.
+
+### Blast radius
+
+Single PR, ~12 files: 4 reducers, dispatcher's `handleLoad`, 2 `gameCommand` calls,
+`Action` and `Effect` types, several phase reducer tests. All mechanical.
+
+**Benefits:** Locality — staleness lives in one counter on state, not a token threaded
+through five layers. Leverage — a fourth load-triggering path doesn't have to invent an
+ID convention. Tests — staleness becomes a unit-test invariant on the loading-question
+reducer alone.
+
+**Deletion test:** removing the loadId field today breaks stale rejection (load-bearing).
+Moving the responsibility from "five-surface token" to "single counter on state"
+concentrates the invariant from 5 sites to 1. ✓
+
+---
+
+## 12. Phase components duplicate the "word card" visual idiom (and partly the question-vote toolbar)
+
+**Status:** open
+
+**Files:**
+
+- `src/routes/games/[code]/WritingPhase.svelte:31-36` — word card ("Was ist eigentlich…")
+- `src/routes/games/[code]/VotingPhase.svelte:23-26` — same card ("Was bedeutet…")
+- `src/routes/games/[code]/ScoringPhase.svelte:17-20` — same card ("Was bedeutet…")
+- `src/routes/games/[code]/WritingPhase.svelte:53-93` and
+  `src/routes/games/[code]/ScoringPhase.svelte:82-106` — thumbs-up/down toolbar wired to
+  `toggleQuestionVote`, near-identical Tailwind classes, slightly drifted layout
+
+**Problem:** Three phase components carry copy-pasted markup for the same UI primitive.
+The "word card" is the visual language for "the current Word" (a glossary concept) — but
+it isn't a component, just markup. The thumbs-up/down toolbar appears in two phases with
+slightly drifted styling. A change to the card's gradient or the toolbar's hover state
+requires three (or two) edits with no compiler help. Adding a fourth phase that needs
+the card means a fourth copy.
+
+**Solution sketch:** Extract `WordCard.svelte` (props: `prompt`, `word`) and
+`QuestionVoteToolbar.svelte` (props: `code`, `myQuestionVote`, optional skip slot for
+writing). Phase components import them. The "word card" becomes a real module owned at
+the route level.
+
+**Open design questions to resolve at grilling time:**
+
+1. Where do the new components live — `src/routes/games/[code]/` (route-local) or
+   `src/lib/components/`? Likely route-local; they're game-specific.
+2. Does the toolbar's writing-phase variant (which includes a `skipWord` button + count)
+   take a slot, a discriminated-union `mode: 'writing' | 'scoring'` prop, or stay as two
+   sibling components? The writing variant has more state (`skipCount`,
+   `you.hasSkipped`) — a `mode` prop may be cleanest, but slot keeps them decoupled.
+3. Is the prompt copy ("Was ist eigentlich…" vs "Was bedeutet…") meaningful UX or
+   incidental drift? If incidental, drop one — fewer props.
+
+**Benefits:** Locality — the visual contract for "displaying the Word" lives once.
+Leverage — restyling, A/B testing the prompt copy, or i18n is a single edit. Tests —
+component-level snapshot is feasible per primitive instead of per phase.
+
+**Deletion test:** today, deleting any one copy breaks one phase. After extraction, the
+card's complexity concentrates in one file. ✓
+
+---
+
+## 13. `helpers.ts` is a kitchen sink — three unrelated concerns under a non-name
+
+**Status:** open
+
+**Files:**
+
+- `src/lib/phase-machine/helpers.ts` — exports `extractBase` (state plumbing), `hashSeed`
+  / `mulberry32` / `shuffleSeeded` (RNG + answer-shuffling fairness), `findPlayer` /
+  `isHost` / `updatePlayer` / `resetRoundFlags` / `applyRewards` (player ops + scoring)
+
+**Problem:** Three semantic groups bundled under one filename:
+
+1. **Answer-shuffling fairness** (`hashSeed`, `mulberry32`, `shuffleSeeded`) — genuine
+   domain logic enforcing the invariant "every player sees answers in the same order"
+   (CONTEXT.md, Answer). The invariant is invisible because the function is named
+   generically; a reader has to trace `shuffleSeeded` → `mulberry32` → hash logic to
+   understand it's intentional anti-cheating design.
+2. **Player ops** (`findPlayer`, `isHost`, `updatePlayer`, `resetRoundFlags`,
+   `applyRewards`) — `findPlayer` and `isHost` are pass-through wrappers around
+   `players.find` / `?.isHost === true` (deletion test for these specifically: inlining
+   loses nothing, they are themselves shallow). `updatePlayer`, `resetRoundFlags`,
+   `applyRewards` do real work (concentrate the immutable-update pattern).
+3. **State plumbing** (`extractBase`, `BaseFields`) — concentrates "what survives a phase
+   transition," used at every phase-edge. Real, but belongs near the state-shape
+   definition.
+
+**Solution sketch:**
+
+- Create `src/lib/phase-machine/answer-shuffling.ts` — owns the fairness invariant + RNG.
+  Narrow public surface: `shuffleAnswersForRound(answers, questionId)`. Add a property
+  test asserting determinism per `questionId`.
+- Move `extractBase` and `BaseFields` into `types.ts` next to `BaseState`.
+- Inline `findPlayer` and `isHost` (one-liners that hide nothing). Keep `updatePlayer`,
+  `resetRoundFlags`, `applyRewards` — they earn their keep.
+- Decide: do the surviving immutable-update helpers stay in a renamed file (e.g.
+  `player.ts`) or move into `round.ts` / phase reducers? Probably the former.
+
+**Open design questions to resolve at grilling time:**
+
+1. Does `applyRewards` belong in `round.ts` (it's scoring; round.ts already has
+   `calculateRewardedPoints`) or stay with player ops (it operates on the players array)?
+2. Does `extractBase` move into `types.ts` or `initial.ts`? `types.ts` is the canonical
+   shape file; arguably the better home.
+3. Worth introducing a `phase-machine/rng.ts` with `hashSeed`/`mulberry32` separate from
+   `answer-shuffling.ts`, or fold both into the latter? Fold — there's only one consumer
+   of the RNG, and naming it `answer-shuffling` is the load-bearing semantic step.
+
+**Benefits:** Locality — answer-fairness rule has a semantic home; "what survives a
+phase transition" sits next to `BaseState`. Leverage — small; mostly readability. Tests
+— the fairness invariant becomes a property test on a named module instead of an
+untested `shuffleSeeded`.
+
+**Deletion test:** Mixed signal. Splitting `shuffleSeeded` → `answer-shuffling`
+concentrates a domain rule (✓). Inlining `findPlayer` / `isHost` removes shallowness (✓).
+The `extractBase` move and the rename of the survivors are organizational, not
+deepening. Worth doing as a small house-cleaning PR; not a "leverage win" candidate.
+
+---
+
 ## Open architectural question (not a deepening, possibly an ADR)
 
 **Persistence is asymmetric.** `schema.ts` has `questions` and `rejected_words` only.
